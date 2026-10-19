@@ -980,6 +980,240 @@
       width: 380px;
       text-align: center;
     }
+
+    /* ========================================================= */
+    /* AUTHENTICATION, RBAC & LEAST PRIVILEGE UI EXTENSIONS     */
+    /* ========================================================= */
+    .user-profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+    }
+    .user-avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .user-info-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+    .user-name-display {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+    .user-role-pill {
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-top: 2px;
+    }
+    .role-admin_geral { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .role-gestor { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .role-analista { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .role-auditor { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+
+    /* Login & MFA Fullscreen Overlay */
+    .login-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .login-card {
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 560px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+      animation: loginFadeIn 0.25s ease-out;
+    }
+    @keyframes loginFadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .login-header {
+      background: linear-gradient(135deg, #090d16 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 26px 28px;
+      position: relative;
+    }
+    .login-header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .login-header-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .login-header-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .login-body {
+      padding: 26px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .demo-credentials-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .demo-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #475569;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .demo-chip {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 11px;
+      text-align: left;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .demo-chip:hover {
+      border-color: #0284c7;
+      background: #f0f9ff;
+      transform: translateY(-1px);
+    }
+    .demo-chip strong {
+      font-size: 11.5px;
+      color: #0f172a;
+    }
+    .demo-chip span {
+      font-size: 10px;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .totp-input-field {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 7px;
+      text-align: center;
+      padding: 12px;
+      width: 100%;
+      border: 2px solid #0284c7;
+      border-radius: var(--radius-sm);
+      outline: none;
+      background: #f8fafc;
+    }
+    .totp-input-field:focus {
+      background: #ffffff;
+      border-color: #0369a1;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+    }
+    .secret-box {
+      background: #f1f5f9;
+      border: 1px dashed #cbd5e1;
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 11.5px;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .secret-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: 1px;
+    }
+    .rbac-role-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .rbac-role-card.role-admin { border-left: 4px solid #7c3aed; }
+    .rbac-role-card.role-ciso { border-left: 4px solid #0284c7; }
+    .rbac-role-card.role-op { border-left: 4px solid #10b981; }
+    .rbac-role-card.role-audit { border-left: 4px solid #f59e0b; }
+    .toast-notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      font-size: 13px;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastSlideUp 0.2s ease-out;
+    }
+    @keyframes toastSlideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -1043,6 +1277,13 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span>Trilha de Auditoria</span>
       </a>
+
+      <div class="nav-section-title" id="nav-section-admin" style="display:none;">Administração Global</div>
+      <a class="nav-item" id="nav-item-usuarios" onclick="switchView('usuarios')" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Usuários & RBAC</span>
+        <span class="badge-counter" style="background:#7c3aed;color:#fff;" id="badge-total-usuarios">4</span>
+      </a>
     </nav>
 
     <div class="sidebar-footer" onclick="switchView('empresa')">
@@ -1070,17 +1311,39 @@
         </div>
       </div>
       <div class="topbar-right">
-        <button class="btn btn-secondary btn-sm" onclick="switchView('empresa')">
+        <button class="btn btn-secondary btn-sm" id="btn-top-editar-empresa" onclick="switchView('empresa')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Editar Empresa
         </button>
         <button class="btn btn-secondary btn-sm" onclick="exportData('csv')">Exportar CSV</button>
         <button class="btn btn-secondary btn-sm" onclick="exportData('json')">Exportar JSON</button>
-        <button class="btn btn-primary btn-sm" onclick="openNewEvidenceModal()">+ Evidência</button>
+        <button class="btn btn-primary btn-sm" id="btn-top-evidencia" onclick="openNewEvidenceModal()">+ Evidência</button>
+
+        <!-- User Profile Pill -->
+        <div class="user-profile-badge" id="topbar-user-badge">
+          <div class="user-avatar-circle" id="top-user-avatar">AD</div>
+          <div class="user-info-text">
+            <div class="user-name-display" id="top-user-name">Administrador Geral</div>
+            <div><span class="user-role-pill role-admin_geral" id="top-user-role">ADMIN GERAL</span></div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="logout()" title="Encerrar Sessão Segura" style="padding:4px 8px; margin-left:4px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sair
+          </button>
+        </div>
       </div>
     </header>
 
     <div class="content-container">
+
+      <!-- Banner de Alerta para Perfil de Auditoria BACEN -->
+      <div id="banner-auditor-alerta" style="display:none; background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:12px 18px; border-radius:var(--radius-sm); margin-bottom:18px; font-size:12.5px; align-items:center; gap:12px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>
+          <strong>Modo de Leitura e Inspeção Regulatória BACEN (Princípio do Menor Privilégio):</strong>
+          Seu perfil ativo é de <strong>Auditor / Fiscal BACEN</strong>. As operações de alteração cadastral, avaliação de requisitos e exclusão de evidências foram desabilitadas para preservar a integridade probatória da fiscalização.
+        </div>
+      </div>
 
       <!-- ============================================== -->
       <!-- MÓDULO 0: CADASTRO DA EMPRESA A SER AVALIADA -->
@@ -1683,8 +1946,299 @@
         </div>
       </section>
 
+      <!-- ============================================== -->
+      <!-- MÓDULO 10: GESTÃO DE USUÁRIOS & RBAC (ADMIN)   -->
+      <!-- ============================================== -->
+      <section id="view-usuarios" class="view-panel">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Gestão Centralizada de Usuários e Controle de Acesso RBAC
+              </div>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                Princípio do Menor Privilégio e Segregação de Funções (Resoluções CMN nº 4.893/2021 e nº 5.274/2025)
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openNewUserModal()">+ Novo Usuário</button>
+          </div>
+          <div class="card-body">
+            <!-- RBAC Hierarchy Matrix -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:12px; margin-bottom:20px;">
+              <div class="rbac-role-card role-admin">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="color:#6d28d9; font-size:12px;">ADMIN GERAL</strong>
+                  <span class="user-role-pill role-admin_geral">Superusuário</span>
+                </div>
+                <div style="font-size:11px; color:#475569; line-height:1.4;">
+                  Acesso irrestrito a todas as instituições, gestão de contas, cadastro de novas instituições e auditoria global de conformidade.
+                </div>
+              </div>
+
+              <div class="rbac-role-card role-ciso">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="color:#0369a1; font-size:12px;">GESTOR / CISO</strong>
+                  <span class="user-role-pill role-gestor">Institucional</span>
+                </div>
+                <div style="font-size:11px; color:#475569; line-height:1.4;">
+                  Gestão completa da instituição vinculada, edição cadastral de políticas e Unicad, governança do PARI, aprovação de relatórios.
+                </div>
+              </div>
+
+              <div class="rbac-role-card role-op">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="color:#047857; font-size:12px;">ANALISTA / OPERADOR</strong>
+                  <span class="user-role-pill role-analista">Operação GRC</span>
+                </div>
+                <div style="font-size:11px; color:#475569; line-height:1.4;">
+                  Alimentação de evidências no cofre, avaliação de controles técnicos, acompanhamento de planos de ação 5W2H e simulações de crise.
+                </div>
+              </div>
+
+              <div class="rbac-role-card role-audit">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="color:#b45309; font-size:12px;">AUDITOR / FISCAL BACEN</strong>
+                  <span class="user-role-pill role-auditor">Somente Leitura</span>
+                </div>
+                <div style="font-size:11px; color:#475569; line-height:1.4;">
+                  Acesso estritamente somente leitura para auditores independentes e fiscais do Banco Central. Integridade de evidências SHA-256 e logs.
+                </div>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nome do Usuário</th>
+                    <th>E-mail Corporativo</th>
+                    <th>Cargo / Lotação</th>
+                    <th>Perfil Global / Instituições</th>
+                    <th>MFA (TOTP)</th>
+                    <th>Status</th>
+                    <th>Último Acesso</th>
+                    <th style="text-align:right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="usuarios-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
+
+  <!-- ============================================== -->
+  <!-- MODAL DE AUTENTICAÇÃO COM RBAC E MFA (TOTP)    -->
+  <!-- ============================================== -->
+  <div class="login-overlay" id="overlay-login" style="display:none;">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-header-badge">BACEN • CMN 4.893 & 5.274</div>
+        <div class="login-header-title">Controle de Acesso & RBAC</div>
+        <div class="login-header-subtitle">
+          Autenticação multifator e menor privilégio para gestão regulatória do SFN
+        </div>
+      </div>
+
+      <!-- PASSO 1: CREDENCIAIS (E-MAIL E SENHA) -->
+      <div class="login-body" id="login-step-credentials">
+        <div class="demo-credentials-box">
+          <div class="demo-title">
+            <span>Contas Pré-Configuradas (Clique para Preencher):</span>
+          </div>
+          <div class="demo-grid">
+            <button type="button" class="demo-chip" onclick="fillLogin('admin@bacen.local', 'Admin@Bacen2026!')">
+              <strong>👑 Admin Geral</strong>
+              <span>admin@bacen.local</span>
+            </button>
+            <button type="button" class="demo-chip" onclick="fillLogin('gestor@alphabank.com.br', 'Gestor@2026!')">
+              <strong>🛡️ Gestor CISO</strong>
+              <span>gestor@alphabank.com.br</span>
+            </button>
+            <button type="button" class="demo-chip" onclick="fillLogin('analista@alphabank.com.br', 'Analista@2026!')">
+              <strong>⚙️ Analista GRC</strong>
+              <span>analista@alphabank.com.br</span>
+            </button>
+            <button type="button" class="demo-chip" onclick="fillLogin('auditor@bacen.gov.br', 'Auditor@2026!')">
+              <strong>🔍 Auditor BACEN</strong>
+              <span>auditor@bacen.gov.br</span>
+            </button>
+          </div>
+        </div>
+
+        <form onsubmit="handleLoginSubmit(event)" style="display:flex; flex-direction:column; gap:14px;">
+          <div class="form-group">
+            <label class="form-label">E-mail Institucional</label>
+            <input type="email" id="login-email" class="form-input" required placeholder="seu.email@instituicao.com.br">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha de Acesso</label>
+            <input type="password" id="login-password" class="form-input" required placeholder="••••••••••••">
+          </div>
+          <div id="login-error-msg" style="display:none; color:#ef4444; font-size:12px; font-weight:600;"></div>
+          <button type="submit" class="btn btn-primary" style="justify-content:center; padding:10px; font-size:13.5px;" id="btn-login-submit">
+            Autenticar e Continuar &rarr;
+          </button>
+        </form>
+      </div>
+
+      <!-- PASSO 2: MFA / SEGUNDO FATOR TOTP (RFC 6238) -->
+      <div class="login-body" id="login-step-mfa" style="display:none;">
+        <div style="text-align:center;">
+          <div style="font-size:14px; font-weight:800; color:#0f172a;">Segundo Fator de Autenticação (MFA)</div>
+          <div style="font-size:11.5px; color:#64748b; margin-top:2px;">
+            Controle Técnico Mandatório nº 01 da Resolução CMN nº 5.274/2025
+          </div>
+        </div>
+
+        <div class="secret-box">
+          <div>
+            <div style="font-size:10.5px; text-transform:uppercase; font-weight:700; color:#64748b;">Chave Secreta TOTP (Base32):</div>
+            <span class="secret-code" id="login-mfa-secret-display">JBSWY3DPEHPK3PXP</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyMfaSecret()" style="font-size:11px; padding:3px 8px;">Copiar</button>
+        </div>
+
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; padding:10px 12px; font-size:11.5px; color:#0369a1;">
+          💡 <strong>Assistente de Demonstração / Homologação:</strong><br>
+          Código TOTP calculado pelo servidor:
+          <button type="button" class="btn btn-outline-primary btn-sm" style="margin-left:6px; padding:2px 8px; font-family:'JetBrains Mono'; font-weight:700;" onclick="useServerTotp()" id="btn-server-totp-preview">
+            Preencher 000000
+          </button>
+        </div>
+
+        <form onsubmit="handleMfaSubmit(event)" style="display:flex; flex-direction:column; gap:14px;">
+          <div class="form-group" style="align-items:center;">
+            <label class="form-label" style="text-align:center;">Informe o Código de 6 Dígitos do seu Autenticador</label>
+            <input type="text" id="login-totp-code" class="totp-input-field" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="123456" required autocomplete="off">
+          </div>
+          <div id="mfa-error-msg" style="display:none; color:#ef4444; font-size:12px; font-weight:600; text-align:center;"></div>
+          <button type="submit" class="btn btn-primary" style="justify-content:center; padding:10px; font-size:13.5px;" id="btn-mfa-submit">
+            Validar Segundo Fator & Acessar
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="backToLoginCredentials()" style="justify-content:center;">
+            &larr; Voltar para Login
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO USUÁRIO RBAC -->
+  <div class="modal-overlay" id="modal-novo-usuario">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Cadastrar Novo Usuário com Controle de Acesso RBAC</div>
+        <button class="modal-close" onclick="closeModal('modal-novo-usuario')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nome Completo</label>
+            <input type="text" id="new-user-nome" class="form-input" placeholder="Ex: Mariana Castro">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail Corporativo</label>
+            <input type="email" id="new-user-email" class="form-input" placeholder="mariana.castro@banco.com.br">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Cargo / Área</label>
+            <input type="text" id="new-user-cargo" class="form-input" placeholder="Ex: Especialista de Segurança da Informação">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha Inicial</label>
+            <input type="text" id="new-user-senha" class="form-input" value="Bacen@2026!Forte">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:4px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; cursor:pointer;">
+            <input type="checkbox" id="new-user-is-admin" onchange="toggleAdminUserRole(this.checked)">
+            👑 Atribuir perfil de Administrador Geral da Aplicação (Acesso irrestrito a todas as instituições)
+          </label>
+        </div>
+
+        <div id="new-user-inst-assignment-section" style="margin-top:10px;">
+          <div class="form-label" style="margin-bottom:6px;">Vínculos e Perfis por Instituição Financeira:</div>
+          <div id="new-user-instituicoes-list" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm);">
+            <!-- Populated dynamically with institutions -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-novo-usuario')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitNewUser()">Criar Usuário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR USUÁRIO RBAC -->
+  <div class="modal-overlay" id="modal-editar-usuario">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Editar Permissões e Perfis do Usuário</div>
+        <button class="modal-close" onclick="closeModal('modal-editar-usuario')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-user-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nome Completo</label>
+            <input type="text" id="edit-user-nome" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail Corporativo</label>
+            <input type="email" id="edit-user-email" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Cargo / Área</label>
+            <input type="text" id="edit-user-cargo" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Redefinir Senha (Deixe em branco para manter)</label>
+            <input type="password" id="edit-user-senha" class="form-input" placeholder="Nova senha (opcional)">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; cursor:pointer;">
+              <input type="checkbox" id="edit-user-is-admin" onchange="toggleEditAdminUserRole(this.checked)">
+              👑 Administrador Geral Global
+            </label>
+          </div>
+          <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; cursor:pointer;">
+              <input type="checkbox" id="edit-user-ativo" checked>
+              Conta Ativa
+            </label>
+          </div>
+        </div>
+
+        <div id="edit-user-inst-assignment-section" style="margin-top:10px;">
+          <div class="form-label" style="margin-bottom:6px;">Vínculos e Perfis por Instituição Financeira:</div>
+          <div id="edit-user-instituicoes-list" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm);">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-editar-usuario')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitEditUser()">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: NOVA INSTITUIÇÃO -->
   <div class="modal-overlay" id="modal-nova-instituicao">
@@ -2008,6 +2562,9 @@
   <script>
     // State
     let appData = {
+      currentUser: null,
+      activeRole: null,
+      accessibleInstitutions: [],
       instituicoes: [],
       instituicao: null,
       kpis: null,
@@ -2017,8 +2574,507 @@
       pari: null,
       fornecedores: [],
       planos: [],
+      usuarios: [],
       incidentes: []
     };
+
+    let pendingLoginToken = null;
+    let serverTotpPreview = null;
+
+    // =========================================================
+    // UNIVERSAL AUTHENTICATED FETCH INTERCEPTOR (RBAC + TOKEN)
+    // =========================================================
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+      options = options || {};
+      options.headers = options.headers || {};
+      const token = localStorage.getItem('bacen_grc_token');
+      if (token) {
+        if (options.headers instanceof Headers) {
+          if (!options.headers.has('Authorization')) {
+            options.headers.set('Authorization', `Bearer ${token}`);
+          }
+        } else if (Array.isArray(options.headers)) {
+          options.headers.push(['Authorization', `Bearer ${token}`]);
+        } else {
+          if (!options.headers['Authorization']) {
+            options.headers['Authorization'] = `Bearer ${token}`;
+          }
+        }
+      }
+      const res = await originalFetch(url, options);
+      if (res.status === 401 && !url.includes('/api/auth/login') && !url.includes('/api/auth/mfa')) {
+        localStorage.removeItem('bacen_grc_token');
+        showLoginOverlay();
+      } else if (res.status === 403 && !url.includes('/api/auth/login') && !url.includes('/api/auth/mfa')) {
+        try {
+          const clone = res.clone();
+          const errData = await clone.json();
+          if (errData && errData.error) {
+            showToast(errData.error, 'warning');
+          }
+        } catch (_) {}
+      }
+      return res;
+    };
+
+    function showToast(msg, type = 'info') {
+      const existing = document.getElementById('app-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.id = 'app-toast';
+      toast.className = 'toast-notification';
+      let icon = 'ℹ️';
+      if (type === 'error') icon = '⛔';
+      else if (type === 'warning') icon = '⚠️';
+      else if (type === 'success') icon = '✅';
+      toast.innerHTML = `<span style="font-size:16px;">${icon}</span> <span>${msg}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+    }
+
+    // =========================================================
+    // AUTHENTICATION & MFA (RFC 6238 TOTP) CONTROLLER
+    // =========================================================
+    function showLoginOverlay() {
+      document.getElementById('overlay-login').style.display = 'flex';
+      document.getElementById('login-step-credentials').style.display = 'flex';
+      document.getElementById('login-step-mfa').style.display = 'none';
+      document.getElementById('login-error-msg').style.display = 'none';
+      document.getElementById('mfa-error-msg').style.display = 'none';
+    }
+
+    function hideLoginOverlay() {
+      document.getElementById('overlay-login').style.display = 'none';
+    }
+
+    function fillLogin(email, pass) {
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-password').value = pass;
+    }
+
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errBox = document.getElementById('login-error-msg');
+      const submitBtn = document.getElementById('btn-login-submit');
+
+      errBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Autenticando...';
+
+      try {
+        const res = await originalFetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errBox.innerText = data.error || 'Falha ao autenticar. Verifique e-mail e senha.';
+          errBox.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Autenticar e Continuar →';
+          return;
+        }
+
+        pendingLoginToken = data.token;
+        serverTotpPreview = data.totp_preview;
+
+        if (data.mfa_required) {
+          document.getElementById('login-step-credentials').style.display = 'none';
+          document.getElementById('login-step-mfa').style.display = 'flex';
+          document.getElementById('login-mfa-secret-display').innerText = data.mfa_secret || 'JBSWY3DPEHPK3PXP';
+          document.getElementById('btn-server-totp-preview').innerText = `Preencher ${data.totp_preview || 'Código'}`;
+          document.getElementById('login-totp-code').value = '';
+          document.getElementById('login-totp-code').focus();
+        } else {
+          localStorage.setItem('bacen_grc_token', data.token);
+          hideLoginOverlay();
+          await init();
+        }
+      } catch (err) {
+        errBox.innerText = 'Erro de conexão com o servidor de autenticação.';
+        errBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Autenticar e Continuar →';
+      }
+    }
+
+    function copyMfaSecret() {
+      const secret = document.getElementById('login-mfa-secret-display').innerText;
+      navigator.clipboard.writeText(secret).then(() => {
+        showToast("Chave Base32 copiada para a área de transferência!", "success");
+      });
+    }
+
+    function useServerTotp() {
+      if (serverTotpPreview) {
+        document.getElementById('login-totp-code').value = serverTotpPreview;
+      }
+    }
+
+    function backToLoginCredentials() {
+      document.getElementById('login-step-credentials').style.display = 'flex';
+      document.getElementById('login-step-mfa').style.display = 'none';
+    }
+
+    async function handleMfaSubmit(event) {
+      event.preventDefault();
+      const code = document.getElementById('login-totp-code').value.trim();
+      const errBox = document.getElementById('mfa-error-msg');
+      const submitBtn = document.getElementById('btn-mfa-submit');
+
+      errBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Validando MFA...';
+
+      try {
+        const res = await originalFetch('/api/auth/mfa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: pendingLoginToken, code: code })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errBox.innerText = data.error || 'Código TOTP inválido ou expirado.';
+          errBox.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Validar Segundo Fator & Acessar';
+          return;
+        }
+
+        localStorage.setItem('bacen_grc_token', pendingLoginToken);
+        hideLoginOverlay();
+        showToast(`Bem-vindo, ${data.user.nome}! Autenticado com sucesso.`, 'success');
+        await init();
+      } catch (err) {
+        errBox.innerText = 'Erro ao validar código MFA com o servidor.';
+        errBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Validar Segundo Fator & Acessar';
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (_) {}
+      localStorage.removeItem('bacen_grc_token');
+      appData.currentUser = null;
+      appData.activeRole = null;
+      showLoginOverlay();
+      showToast('Sessão encerrada com segurança.', 'info');
+    }
+
+    function updateUserBadge(user, role) {
+      if (!user) return;
+      document.getElementById('top-user-name').innerText = user.nome;
+      
+      const parts = user.nome.split(' ');
+      const initials = (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+      document.getElementById('top-user-avatar').innerText = initials || 'US';
+
+      const roleEl = document.getElementById('top-user-role');
+      roleEl.className = 'user-role-pill';
+
+      const roleLabels = {
+        'admin_geral': 'ADMIN GERAL',
+        'gestor': 'GESTOR CISO',
+        'analista': 'ANALISTA GRC',
+        'auditor': 'AUDITOR BACEN'
+      };
+
+      const effectiveRole = user.is_admin_geral ? 'admin_geral' : (role || 'analista');
+      roleEl.classList.add(`role-${effectiveRole}`);
+      roleEl.innerText = roleLabels[effectiveRole] || effectiveRole.toUpperCase();
+    }
+
+    function applyRoleRestrictions(role, isAdmin) {
+      const bannerAuditor = document.getElementById('banner-auditor-alerta');
+      const btnTopEditarEmpresa = document.getElementById('btn-top-editar-empresa');
+      const btnTopEvidencia = document.getElementById('btn-top-evidencia');
+      const navSectionAdmin = document.getElementById('nav-section-admin');
+      const navItemUsuarios = document.getElementById('nav-item-usuarios');
+      const companyFormInputs = document.querySelectorAll('#form-empresa input, #form-empresa select, #form-empresa textarea, #form-empresa button[type="submit"]');
+
+      if (isAdmin) {
+        if (navSectionAdmin) navSectionAdmin.style.display = 'block';
+        if (navItemUsuarios) navItemUsuarios.style.display = 'flex';
+      } else {
+        if (navSectionAdmin) navSectionAdmin.style.display = 'none';
+        if (navItemUsuarios) navItemUsuarios.style.display = 'none';
+      }
+
+      if (role === 'auditor') {
+        if (bannerAuditor) bannerAuditor.style.display = 'flex';
+        if (btnTopEditarEmpresa) btnTopEditarEmpresa.style.display = 'none';
+        if (btnTopEvidencia) btnTopEvidencia.style.display = 'none';
+        companyFormInputs.forEach(el => el.disabled = true);
+      } else if (role === 'analista') {
+        if (bannerAuditor) bannerAuditor.style.display = 'none';
+        if (btnTopEditarEmpresa) btnTopEditarEmpresa.style.display = 'none';
+        if (btnTopEvidencia) btnTopEvidencia.style.display = 'inline-flex';
+        companyFormInputs.forEach(el => el.disabled = true);
+      } else {
+        if (bannerAuditor) bannerAuditor.style.display = 'none';
+        if (btnTopEditarEmpresa) btnTopEditarEmpresa.style.display = 'inline-flex';
+        if (btnTopEvidencia) btnTopEvidencia.style.display = 'inline-flex';
+        companyFormInputs.forEach(el => el.disabled = false);
+      }
+    }
+
+    // =========================================================
+    // RBAC: GESTÃO CENTRALIZADA DE USUÁRIOS (ADMIN GERAL)
+    // =========================================================
+    async function loadUsuarios() {
+      if (!appData.currentUser?.is_admin_geral) return;
+      try {
+        const res = await fetch('/api/usuarios');
+        if (!res.ok) return;
+        const users = await res.json();
+        appData.usuarios = users;
+
+        const badge = document.getElementById('badge-total-usuarios');
+        if (badge) badge.innerText = users.length;
+        const tbody = document.getElementById('usuarios-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+
+          let roleChips = '';
+          if (u.is_admin_geral) {
+            roleChips = '<span class="user-role-pill role-admin_geral">Admin Geral (Todas as IFs)</span>';
+          } else if (u.instituicoes && u.instituicoes.length > 0) {
+            roleChips = u.instituicoes.map(ui => `
+              <div style="margin-bottom:3px;">
+                <span class="user-role-pill role-${ui.perfil}">${ui.perfil.toUpperCase()}</span>
+                <span style="font-size:11px; color:#475569; margin-left:4px;">${ui.razao_social}</span>
+              </div>
+            `).join('');
+          } else {
+            roleChips = '<span style="color:#94a3b8; font-size:11px;">Sem instituições vinculadas</span>';
+          }
+
+          const mfaBadge = u.mfa_habilitado 
+            ? '<span class="status-badge atendido" style="font-size:10.5px;">✓ Ativo (TOTP)</span>' 
+            : '<span class="status-badge nao_atendido" style="font-size:10.5px;">Pendente</span>';
+
+          const statusBadge = u.ativo 
+            ? '<span style="color:#10b981; font-weight:700;">Ativo</span>' 
+            : '<span style="color:#ef4444; font-weight:700;">Inativo</span>';
+
+          tr.innerHTML = `
+            <td>
+              <div style="font-weight:700; color:#0f172a;">${u.nome}</div>
+              <div style="font-size:11px; color:#64748b;">${u.cargo || '-'}</div>
+            </td>
+            <td style="font-family:'JetBrains Mono'; font-size:11.5px;">${u.email}</td>
+            <td>${u.cargo || 'Especialista'}</td>
+            <td>${roleChips}</td>
+            <td>${mfaBadge}</td>
+            <td>${statusBadge}</td>
+            <td style="font-size:11px; color:#64748b;">${u.ultimo_login || 'Nunca acessou'}</td>
+            <td style="text-align:right;">
+              <button class="btn btn-secondary btn-sm" onclick="openEditUserModal(${u.id})">Editar</button>
+              ${!u.is_admin_geral || u.id !== appData.currentUser.id ? `
+                <button class="btn btn-secondary btn-sm" style="color:#ef4444; margin-left:4px;" onclick="deleteUser(${u.id})">Excluir</button>
+              ` : ''}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar usuários:", err);
+      }
+    }
+
+    function openNewUserModal() {
+      document.getElementById('new-user-nome').value = '';
+      document.getElementById('new-user-email').value = '';
+      document.getElementById('new-user-cargo').value = '';
+      document.getElementById('new-user-senha').value = 'Bacen@2026!Forte';
+      document.getElementById('new-user-is-admin').checked = false;
+      toggleAdminUserRole(false);
+      populateInstitutionRolesList('new-user-instituicoes-list');
+      openModal('modal-novo-usuario');
+    }
+
+    function toggleAdminUserRole(isAdmin) {
+      const section = document.getElementById('new-user-inst-assignment-section');
+      if (section) {
+        section.style.opacity = isAdmin ? '0.4' : '1';
+        section.style.pointerEvents = isAdmin ? 'none' : 'auto';
+      }
+    }
+
+    function toggleEditAdminUserRole(isAdmin) {
+      const section = document.getElementById('edit-user-inst-assignment-section');
+      if (section) {
+        section.style.opacity = isAdmin ? '0.4' : '1';
+        section.style.pointerEvents = isAdmin ? 'none' : 'auto';
+      }
+    }
+
+    function populateInstitutionRolesList(containerId, currentAssignments = []) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+
+      appData.instituicoes.forEach(inst => {
+        const existing = currentAssignments.find(a => a.instituicao_id === inst.id);
+        const selectedRole = existing ? existing.perfil : 'analista';
+        const isChecked = Boolean(existing);
+
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; background:#fff; padding:6px 10px; border-radius:4px; border:1px solid #e2e8f0;';
+        row.innerHTML = `
+          <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; flex:1;">
+            <input type="checkbox" class="inst-check" data-inst-id="${inst.id}" ${isChecked ? 'checked' : ''}>
+            <span><strong>${inst.razao_social}</strong> (${inst.segmento})</span>
+          </label>
+          <select class="form-select inst-role-select" data-inst-id="${inst.id}" style="width:140px; padding:4px 8px; font-size:11.5px;">
+            <option value="gestor" ${selectedRole === 'gestor' ? 'selected' : ''}>Gestor (CISO)</option>
+            <option value="analista" ${selectedRole === 'analista' ? 'selected' : ''}>Analista (GRC)</option>
+            <option value="auditor" ${selectedRole === 'auditor' ? 'selected' : ''}>Auditor (Leitura)</option>
+          </select>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    async function submitNewUser() {
+      const nome = document.getElementById('new-user-nome').value.trim();
+      const email = document.getElementById('new-user-email').value.trim();
+      const cargo = document.getElementById('new-user-cargo').value.trim();
+      const senha = document.getElementById('new-user-senha').value;
+      const isAdmin = document.getElementById('new-user-is-admin').checked;
+
+      if (!nome || !email) {
+        alert("Preencha o nome e o e-mail corporativo.");
+        return;
+      }
+
+      const instituicoes = [];
+      if (!isAdmin) {
+        document.querySelectorAll('#new-user-instituicoes-list .inst-check:checked').forEach(chk => {
+          const instId = parseInt(chk.dataset.instId);
+          const sel = document.querySelector(`#new-user-instituicoes-list .inst-role-select[data-inst-id="${instId}"]`);
+          instituicoes.push({
+            instituicao_id: instId,
+            perfil: sel.value
+          });
+        });
+      }
+
+      try {
+        const res = await fetch('/api/usuarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome, email, cargo, senha,
+            is_admin_geral: isAdmin,
+            instituicoes
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeModal('modal-novo-usuario');
+          showToast(`Usuário ${nome} criado com sucesso! MFA configurado.`, 'success');
+          await loadUsuarios();
+          await loadAuditoria();
+        } else {
+          alert(data.error || "Erro ao cadastrar usuário.");
+        }
+      } catch (err) {
+        alert("Erro de comunicação ao criar usuário.");
+      }
+    }
+
+    function openEditUserModal(id) {
+      const u = appData.usuarios.find(x => x.id === id);
+      if (!u) return;
+
+      document.getElementById('edit-user-id').value = u.id;
+      document.getElementById('edit-user-nome').value = u.nome;
+      document.getElementById('edit-user-email').value = u.email;
+      document.getElementById('edit-user-cargo').value = u.cargo || '';
+      document.getElementById('edit-user-senha').value = '';
+      document.getElementById('edit-user-is-admin').checked = Boolean(u.is_admin_geral);
+      document.getElementById('edit-user-ativo').checked = Boolean(u.ativo);
+
+      toggleEditAdminUserRole(Boolean(u.is_admin_geral));
+      populateInstitutionRolesList('edit-user-instituicoes-list', u.instituicoes || []);
+      openModal('modal-editar-usuario');
+    }
+
+    async function submitEditUser() {
+      const id = document.getElementById('edit-user-id').value;
+      const nome = document.getElementById('edit-user-nome').value.trim();
+      const email = document.getElementById('edit-user-email').value.trim();
+      const cargo = document.getElementById('edit-user-cargo').value.trim();
+      const senha = document.getElementById('edit-user-senha').value;
+      const isAdmin = document.getElementById('edit-user-is-admin').checked;
+      const ativo = document.getElementById('edit-user-ativo').checked;
+
+      const instituicoes = [];
+      if (!isAdmin) {
+        document.querySelectorAll('#edit-user-instituicoes-list .inst-check:checked').forEach(chk => {
+          const instId = parseInt(chk.dataset.instId);
+          const sel = document.querySelector(`#edit-user-instituicoes-list .inst-role-select[data-inst-id="${instId}"]`);
+          instituicoes.push({
+            instituicao_id: instId,
+            perfil: sel.value
+          });
+        });
+      }
+
+      const payload = {
+        nome, email, cargo, is_admin_geral: isAdmin, ativo, instituicoes
+      };
+      if (senha) payload.senha = senha;
+
+      try {
+        const res = await fetch(`/api/usuarios/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeModal('modal-editar-usuario');
+          showToast(`Usuário ${nome} atualizado com sucesso!`, 'success');
+          await loadUsuarios();
+          await loadAuditoria();
+        } else {
+          alert(data.error || "Erro ao atualizar usuário.");
+        }
+      } catch (err) {
+        alert("Erro ao salvar alterações do usuário.");
+      }
+    }
+
+    async function deleteUser(id) {
+      if (!confirm("Confirma a exclusão deste usuário do sistema GRC? Esta ação será registrada na trilha de auditoria.")) return;
+      try {
+        const res = await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("Usuário removido do sistema.", "success");
+          await loadUsuarios();
+          await loadAuditoria();
+        } else {
+          alert(data.error || "Erro ao excluir usuário.");
+        }
+      } catch (err) {
+        alert("Erro ao excluir usuário.");
+      }
+    }
 
     // Navigation Switcher
     function switchView(viewName) {
@@ -2041,6 +3097,8 @@
         loadPari();
       } else if (viewName === 'empresa') {
         populateCompanyForm();
+      } else if (viewName === 'usuarios') {
+        loadUsuarios();
       }
     }
 
@@ -2054,8 +3112,31 @@
       event.target.classList.add('active');
     }
 
-    // Initialize App
+    // Initialize App with Session Check
     async function init() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          showLoginOverlay();
+          return;
+        }
+        const authData = await res.json();
+        if (!authData.authenticated) {
+          showLoginOverlay();
+          return;
+        }
+        hideLoginOverlay();
+        appData.currentUser = authData.user;
+        appData.activeRole = authData.perfil_ativo;
+        appData.accessibleInstitutions = authData.instituicoes;
+
+        updateUserBadge(authData.user, authData.perfil_ativo);
+        applyRoleRestrictions(authData.perfil_ativo, authData.user.is_admin_geral);
+      } catch (err) {
+        showLoginOverlay();
+        return;
+      }
+
       await loadInstituicoes();
       await loadDashboard();
       await loadDominios();
@@ -2065,6 +3146,9 @@
       await loadNuvem();
       await loadPlanos();
       await loadAuditoria();
+      if (appData.currentUser?.is_admin_geral) {
+        await loadUsuarios();
+      }
     }
 
     // 0. Instituições
@@ -2663,6 +3747,18 @@
           evList.innerHTML = '<div style="color:#94a3b8; font-style:italic;">Nenhuma evidência vinculada.</div>';
         }
 
+        // Least Privilege / Read-only enforcement for Auditor in Assessment Modal
+        const isAuditor = (appData.activeRole === 'auditor') && !appData.currentUser?.is_admin_geral;
+        const saveBtn = document.querySelector('#modal-avaliacao .modal-footer .btn-primary');
+        if (saveBtn) saveBtn.style.display = isAuditor ? 'none' : 'inline-flex';
+
+        const addEvBtn = document.querySelector('#modal-avaliacao button[onclick="triggerAddEvidenceFromModal()"]');
+        if (addEvBtn) addEvBtn.style.display = isAuditor ? 'none' : 'inline-flex';
+
+        document.querySelectorAll('#modal-avaliacao input, #modal-avaliacao select, #modal-avaliacao textarea').forEach(el => {
+          el.disabled = isAuditor;
+        });
+
         openModal('modal-avaliacao');
       } catch (err) {
         console.error(err);
@@ -2693,7 +3789,7 @@
         prazo_adequacao: document.getElementById('edit-prazo').value,
         justificativa: document.getElementById('edit-justificativa').value,
         observacoes_auditor: document.getElementById('edit-obs-auditor').value,
-        avaliador: 'Auditor CISO / GRC'
+        avaliador: appData.currentUser ? `${appData.currentUser.nome} (${appData.activeRole})` : 'Auditor CISO / GRC'
       };
 
       try {
@@ -2704,6 +3800,7 @@
         });
         if (res.ok) {
           closeModal('modal-avaliacao');
+          showToast("Avaliação atualizada com sucesso!", "success");
           await loadDashboard();
           await loadRequisitos();
           await loadAuditoria();
@@ -2720,6 +3817,7 @@
         const evs = await res.json();
         appData.evidencias = evs;
 
+        const canDelete = appData.currentUser?.is_admin_geral || appData.activeRole === 'gestor';
         const tbody = document.getElementById('evidencias-table-body');
         tbody.innerHTML = '';
         evs.forEach(e => {
@@ -2742,7 +3840,7 @@
             <td><span class="status-badge atendido">Validada</span></td>
             <td style="text-align:right;">
               ${e.caminho_arquivo ? `<a href="${e.caminho_arquivo}" target="_blank" class="btn btn-secondary btn-sm">Baixar</a>` : ''}
-              <button class="btn btn-secondary btn-sm" onclick="deleteEvidence(${e.id})" style="color:#ef4444;">Excluir</button>
+              ${canDelete ? `<button class="btn btn-secondary btn-sm" onclick="deleteEvidence(${e.id})" style="color:#ef4444;">Excluir</button>` : ''}
             </td>
           `;
           tbody.appendChild(tr);

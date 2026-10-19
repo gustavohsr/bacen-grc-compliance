@@ -22,6 +22,9 @@ Sistema Web Especializado para Gestão de Governança, Riscos e Conformidade (GR
 
 ```mermaid
 erDiagram
+    USUARIOS ||--o{ USUARIO_INSTITUICOES : vincula
+    USUARIOS ||--o{ SESSOES : mantem
+    INSTITUICAO ||--o{ USUARIO_INSTITUICOES : aloca
     INSTITUICAO ||--o{ AVALIACOES : avalia
     INSTITUICAO ||--o{ EVIDENCIAS : custodia
     INSTITUICAO ||--o{ PLANOS_ACAO : executa
@@ -38,6 +41,9 @@ erDiagram
 ```
 
 ### Tabelas Principais
+* `usuarios`: Gestão centralizada de usuários, senha segura com salt PBKDF2-SHA256 (100.000 iterações), flag de administrador geral global e chave secreta para MFA TOTP (RFC 6238).
+* `usuario_instituicoes`: Tabela de amarração de Controle de Acesso Baseado em Papéis (RBAC) granular por instituição (`CHECK(perfil IN ('gestor', 'analista', 'auditor'))`).
+* `sessoes`: Controle de sessões ativas com token criptográfico de 256 bits, prazo de expiração e flag de validação de segundo fator (`mfa_verificado`).
 * `instituicao`: Cadastro da instituição financeira, CNPJ, segmento S1 a S5, tipo de instituição, registro Unicad e diretor estatutário (Art. 7º).
 * `dominios`: Os 7 domínios de governança regulatória.
 * `requisitos`: Os 32 requisitos normativos com referência legal, especificação técnica, flag dos 14 controles mandatórios da 5.274 e severidade.
@@ -53,25 +59,51 @@ erDiagram
 
 ---
 
-## 3. Especificação da REST API
+## 3. Matriz de Controle de Acesso RBAC (Least Privilege)
 
-| Método | Endpoint | Descrição |
-|:-------|:---------|:----------|
-| `GET` | `/api/dashboard` | Retorna métricas globais de conformidade, KPIs, breakdown dos 14 controles da 5.274 e estatísticas por domínio. |
-| `GET` | `/api/instituicoes` | Lista todas as instituições cadastradas no sistema. |
-| `GET` | `/api/instituicao/ativa` | Retorna os dados da instituição atualmente ativa para avaliação. |
-| `POST` | `/api/instituicoes` | Cadastra uma nova instituição financeira para avaliação de conformidade. |
-| `PUT` | `/api/instituicao/{id}` | Atualiza dados cadastrais, segmento, diretor estatutário ou governança. |
-| `POST` | `/api/instituicao/{id}/ativar` | Define a instituição especificada como ativa no portal. |
-| `GET` | `/api/requisitos` | Lista os requisitos regulatórios com filtros por domínio, status, severidade e busca. |
-| `PUT` | `/api/avaliacoes/{id}` | Atualiza o status de compliance, percentual de aderência e justificativa técnica. |
-| `GET` | `/api/evidencias` | Consulta as evidências vinculadas aos requisitos. |
-| `POST` | `/api/evidencias` | Registra e anexa nova evidência com cálculo automático de hash SHA-256. |
-| `DELETE` | `/api/evidencias/{id}` | Remove evidência do cofre regulatório. |
-| `GET` | `/api/pari` | Retorna o dossiê completo do PARI (governança, playbooks, simulados e incidentes). |
-| `PUT` | `/api/pari/governanca` | Atualiza contatos do CSIRT, plantão 24x7 e critérios de acionamento do SISBACEN. |
-| `POST` | `/api/pari/playbooks` | Cadastra novo playbook operacional de resposta a incidentes. |
-| `POST` | `/api/pari/simulados` | Registra realização de exercício de mesa / simulado de crise. |
-| `GET` | `/api/relatorio_anual` | Gera o Relatório Anual do Art. 8º da Resolução 4.893 pronto para exportação/PDF. |
-| `GET` | `/api/export/csv` | Exporta a matriz completa de conformidade em formato CSV (compatível com Excel). |
-| `GET` | `/api/export/json` | Exporta o dossiê regulatório estruturado em formato JSON. |
+| Funcionalidade / Operação | Admin Geral | Gestor (CISO) | Analista (GRC) | Auditor / Fiscal BACEN |
+|:---|:---:|:---:|:---:|:---:|
+| Gestão Centralizada de Usuários (`/api/usuarios`) | ✅ Total | ❌ Bloqueado | ❌ Bloqueado | ❌ Bloqueado |
+| Cadastrar Nova Instituição Financeira | ✅ Total | ❌ Bloqueado | ❌ Bloqueado | ❌ Bloqueado |
+| Alterar Dados Cadastrais e Unicad da Empresa | ✅ Total | ✅ Permitido | ❌ Bloqueado | ❌ Bloqueado |
+| Atualizar Avaliações de Requisitos GRC | ✅ Total | ✅ Permitido | ✅ Permitido | ❌ Bloqueado (Read-Only) |
+| Inserir Novas Evidências no Cofre | ✅ Total | ✅ Permitido | ✅ Permitido | ❌ Bloqueado (Read-Only) |
+| Excluir Evidências do Cofre Regulatório | ✅ Total | ✅ Permitido | ❌ Bloqueado | ❌ Bloqueado (Read-Only) |
+| Governança do PARI e Plantão CSIRT | ✅ Total | ✅ Permitido | ❌ Bloqueado | ❌ Bloqueado (Read-Only) |
+| Cadastrar Playbooks e Simulados de Crise | ✅ Total | ✅ Permitido | ✅ Permitido | ❌ Bloqueado (Read-Only) |
+| Gestão de Fornecedores de Nuvem (Art. 17) | ✅ Total | ✅ Permitido | ❌ Bloqueado | ❌ Bloqueado (Read-Only) |
+| Consulta ao Dossiê e Relatório Anual (Art. 8º) | ✅ Total | ✅ Permitido | ✅ Permitido | ✅ Permitido (Fiscalização) |
+| Acesso às Trilhas Imutáveis de Auditoria | ✅ Total | ✅ Permitido | ✅ Permitido | ✅ Permitido (Fiscalização) |
+
+---
+
+## 4. Especificação da REST API
+
+| Método | Endpoint | Perfil Mínimo | Descrição |
+|:-------|:---------|:--------------|:----------|
+| `POST` | `/api/auth/login` | Público | Autentica e-mail e senha com PBKDF2 e retorna sessão pendente de MFA |
+| `POST` | `/api/auth/mfa` | Público | Valida código TOTP de 6 dígitos (RFC 6238) e libera sessão autenticada |
+| `GET` | `/api/auth/me` | Autenticado | Retorna dados do usuário autenticado, perfil ativo e IFs autorizadas |
+| `POST` | `/api/auth/logout` | Autenticado | Invalida a sessão ativa |
+| `GET` | `/api/usuarios` | Admin Geral | Lista todos os usuários, papéis e instituições vinculadas |
+| `POST` | `/api/usuarios` | Admin Geral | Cadastra usuário com perfis RBAC granulares por instituição |
+| `PUT` | `/api/usuarios/{id}` | Admin Geral | Atualiza dados, papéis ou revoga acesso de usuário |
+| `DELETE`| `/api/usuarios/{id}` | Admin Geral | Exclui usuário do sistema |
+| `GET` | `/api/dashboard` | Todos | Retorna métricas globais de conformidade, KPIs e 14 controles da 5.274 |
+| `GET` | `/api/instituicoes` | Todos | Lista instituições financeiras autorizadas ao usuário logado |
+| `GET` | `/api/instituicao/ativa` | Todos | Retorna dados cadastrais da instituição ativa para avaliação |
+| `POST` | `/api/instituicoes` | Admin Geral | Cadastra nova instituição financeira para avaliação |
+| `PUT` | `/api/instituicao/{id}` | Gestor / Admin | Atualiza dados cadastrais, segmento, diretor estatutário ou governança |
+| `POST` | `/api/instituicao/{id}/ativar` | Todos (se vinculado) | Alterna a instituição ativa para navegação |
+| `GET` | `/api/requisitos` | Todos | Lista requisitos com filtros por domínio, status, severidade e busca |
+| `PUT` | `/api/avaliacoes/{id}` | Analista / Gestor / Admin | Atualiza status de compliance, percentual de aderência e justificativa |
+| `GET` | `/api/evidencias` | Todos | Consulta evidências vinculadas aos requisitos |
+| `POST` | `/api/evidencias` | Analista / Gestor / Admin | Registra e anexa nova evidência com cálculo automático de hash SHA-256 |
+| `DELETE`| `/api/evidencias/{id}` | Gestor / Admin | Remove evidência do cofre regulatório (Analista e Auditor bloqueados) |
+| `GET` | `/api/pari` | Todos | Retorna o dossiê completo do PARI (CSIRT, playbooks, simulados) |
+| `PUT` | `/api/pari/governanca` | Gestor / Admin | Atualiza governança do CSIRT, plantão 24x7 e critérios SISBACEN |
+| `POST` | `/api/pari/playbooks` | Analista / Gestor / Admin | Cadastra novo playbook operacional de resposta a incidentes |
+| `POST` | `/api/pari/simulados` | Analista / Gestor / Admin | Registra realização de exercício de mesa / simulado de crise |
+| `GET` | `/api/relatorio_anual` | Todos | Gera o Relatório Anual do Art. 8º da Resolução 4.893 para PDF/impressão |
+| `GET` | `/api/export/csv` | Todos | Exporta matriz de conformidade em formato CSV (Excel) |
+| `GET` | `/api/export/json` | Todos | Exporta dossiê regulatório estruturado em formato JSON |

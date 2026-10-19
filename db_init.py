@@ -1,5 +1,6 @@
 """
 Database initialization and regulatory schema for BACEN CMN 4.893 / 5.274 Compliance GRC.
+Includes RBAC (Role-Based Access Control), Least Privilege, MFA and Multi-institution mapping.
 """
 import sqlite3
 import os
@@ -18,7 +19,55 @@ def init_db():
 
     cursor.execute("PRAGMA foreign_keys = ON;")
 
-    # 1. Instituições Financeiras Avaliadas (Multi-instituição e configurável)
+    # 1. Usuários do Sistema (RBAC)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        senha_hash TEXT NOT NULL,
+        senha_salt TEXT NOT NULL,
+        is_admin_geral INTEGER DEFAULT 0,
+        mfa_habilitado INTEGER DEFAULT 1,
+        mfa_secret TEXT NOT NULL,
+        ativo INTEGER DEFAULT 1,
+        cargo TEXT,
+        ultimo_login TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    # 2. Vínculo Usuário x Instituições x Perfil (Menor Privilégio por Instituição)
+    # Perfis: 'gestor' (CISO/Compliance), 'analista' (Operador), 'auditor' (Somente Leitura/BACEN)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuario_instituicoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER NOT NULL,
+        instituicao_id INTEGER NOT NULL,
+        perfil TEXT NOT NULL CHECK(perfil IN ('gestor', 'analista', 'auditor')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE,
+        UNIQUE(usuario_id, instituicao_id)
+    );
+    """)
+
+    # 3. Sessões Ativas e Tokens de Autenticação com MFA
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sessoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        token TEXT UNIQUE NOT NULL,
+        usuario_id INTEGER NOT NULL,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expira_em TIMESTAMP NOT NULL,
+        mfa_verificado INTEGER DEFAULT 0,
+        ip_origem TEXT,
+        user_agent TEXT,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
+    );
+    """)
+
+    # 4. Instituições Financeiras Avaliadas
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS instituicao (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +90,7 @@ def init_db():
     );
     """)
 
-    # 2. Domínios Regulatórios
+    # 5. Domínios Regulatórios
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS dominios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +103,7 @@ def init_db():
     );
     """)
 
-    # 3. Requisitos Normativos
+    # 6. Requisitos Normativos
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS requisitos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,16 +113,16 @@ def init_db():
         titulo TEXT NOT NULL,
         descricao_legal TEXT NOT NULL,
         especificacao_tecnica TEXT NOT NULL,
-        is_cmn_5274_obrigatorio INTEGER DEFAULT 0, -- 1 se for um dos 14 controles mandatórios da 5.274
-        numero_controle_5274 INTEGER, -- 1 a 14
-        severidade TEXT NOT NULL, -- Critica, Alta, Media, Baixa
+        is_cmn_5274_obrigatorio INTEGER DEFAULT 0,
+        numero_controle_5274 INTEGER,
+        severidade TEXT NOT NULL,
         segmento_aplicavel TEXT NOT NULL DEFAULT 'Todos',
         evidencias_sugeridas TEXT NOT NULL,
         FOREIGN KEY (dominio_id) REFERENCES dominios (id)
     );
     """)
 
-    # 4. Avaliações de Compliance (GRC) vinculadas à instituição
+    # 7. Avaliações de Compliance (GRC) vinculadas à instituição
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS avaliacoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,19 +138,19 @@ def init_db():
         observacoes_auditor TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (requisito_id) REFERENCES requisitos (id),
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id),
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE,
         UNIQUE(instituicao_id, requisito_id)
     );
     """)
 
-    # 5. Evidências Regulatórias
+    # 8. Evidências Regulatórias
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evidencias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         instituicao_id INTEGER NOT NULL DEFAULT 1,
         requisito_id INTEGER NOT NULL,
         titulo TEXT NOT NULL,
-        tipo TEXT NOT NULL, -- Politica, Relatório Pentest, Log/Auditoria, Ata de Diretoria, Contrato Cloud, Certificado/Config
+        tipo TEXT NOT NULL,
         descricao TEXT,
         nome_arquivo TEXT,
         caminho_arquivo TEXT,
@@ -111,13 +160,13 @@ def init_db():
         link_externo TEXT,
         coletor TEXT NOT NULL,
         data_coleta DATE NOT NULL,
-        status_validacao TEXT DEFAULT 'Validada', -- Validada, Em Analise, Rejeitada
+        status_validacao TEXT DEFAULT 'Validada',
         FOREIGN KEY (requisito_id) REFERENCES requisitos (id),
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id)
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
-    # 6. Planos de Ação (5W2H)
+    # 9. Planos de Ação (5W2H)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS planos_acao (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,22 +180,22 @@ def init_db():
         quando DATE NOT NULL,
         como TEXT NOT NULL,
         quanto REAL DEFAULT 0.0,
-        status TEXT DEFAULT 'Em_Andamento', -- Nao_Iniciado, Em_Andamento, Concluido, Atrasado
+        status TEXT DEFAULT 'Em_Andamento',
         progresso_pct INTEGER DEFAULT 0,
         data_conclusao DATE,
         FOREIGN KEY (requisito_id) REFERENCES requisitos (id),
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id)
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
-    # 7. Fornecedores de Nuvem e Terceiros Relevantes (Arts. 11 a 17)
+    # 10. Fornecedores de Nuvem e Terceiros Relevantes (Arts. 11 a 17)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS fornecedores_nuvem (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         instituicao_id INTEGER NOT NULL DEFAULT 1,
         nome_provedor TEXT NOT NULL,
         servico_prestado TEXT NOT NULL,
-        tipo_nuvem TEXT NOT NULL, -- IaaS, PaaS, SaaS
+        tipo_nuvem TEXT NOT NULL,
         pais_armazenamento TEXT NOT NULL,
         servico_relevante INTEGER NOT NULL DEFAULT 1,
         notificado_bacen INTEGER NOT NULL DEFAULT 1,
@@ -157,13 +206,13 @@ def init_db():
         clausula_continuidade INTEGER NOT NULL DEFAULT 1,
         clausula_reversibilidade INTEGER NOT NULL DEFAULT 1,
         data_ultimo_teste_contingencia DATE,
-        nivel_risco TEXT DEFAULT 'Baixo', -- Baixo, Medio, Alto, Critico
+        nivel_risco TEXT DEFAULT 'Baixo',
         observacoes TEXT,
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id)
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
-    # 8. MÓDULO PARI: Governança do Plano de Ação e Resposta a Incidentes (Arts. 6º e 8º)
+    # 11. MÓDULO PARI: Governança do CSIRT (Arts. 6º e 8º)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS pari_governanca (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,29 +227,29 @@ def init_db():
         procedimento_sisbacen TEXT,
         data_ultima_revisao_pari DATE,
         versao_pari TEXT DEFAULT '2.0',
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id)
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
-    # 9. MÓDULO PARI: Playbooks de Resposta Operacional
+    # 12. MÓDULO PARI: Playbooks Operacionais
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS pari_playbooks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         instituicao_id INTEGER NOT NULL DEFAULT 1,
         codigo TEXT NOT NULL,
         titulo_cenario TEXT NOT NULL,
-        categoria TEXT NOT NULL, -- Ransomware, Vazamento de Dados, DDoS, Intrusão/APIs, Nuvem, RSFN
+        categoria TEXT NOT NULL,
         etapa_deteccao TEXT NOT NULL,
         etapa_contencao TEXT NOT NULL,
         etapa_erradicacao TEXT NOT NULL,
         etapa_recuperacao TEXT NOT NULL,
         etapa_comunicacao_bacen TEXT NOT NULL,
         tempo_estimado_resposta TEXT,
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id)
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
-    # 10. MÓDULO PARI: Exercícios e Simulados de Mesa (Tabletop Drills)
+    # 13. MÓDULO PARI: Simulados e Exercícios de Crise
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS pari_simulados (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,11 +263,11 @@ def init_db():
         gargalos_identificados TEXT,
         acoes_melhoria TEXT,
         status TEXT DEFAULT 'Concluido',
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id)
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
-    # 11. Registro de Incidentes Reais
+    # 14. Registro de Incidentes Reais
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS incidentes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -227,20 +276,20 @@ def init_db():
         titulo TEXT NOT NULL,
         data_ocorrencia TIMESTAMP NOT NULL,
         data_deteccao TIMESTAMP NOT NULL,
-        categoria TEXT NOT NULL, -- Ransomware, Phishing, Intrusão, Vazamento, Negação de Serviço, Indisponibilidade
-        criticidade TEXT NOT NULL, -- Crítica, Alta, Média, Baixa
+        categoria TEXT NOT NULL,
+        criticidade TEXT NOT NULL,
         sistemas_afetados TEXT NOT NULL,
         impacto_operacional TEXT,
-        status TEXT NOT NULL, -- Em Análise, Contido, Mitigado, Encerrado
+        status TEXT NOT NULL,
         notificado_bacen INTEGER DEFAULT 0,
         data_notificacao_bacen DATE,
         causa_raiz TEXT,
         acoes_corretivas TEXT,
-        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id)
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
-    # 12. Trilha de Auditoria (Audit Log)
+    # 15. Trilha de Auditoria (Audit Log)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS auditoria_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -255,7 +304,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("Database tables updated and initialized successfully.")
+    print("Database tables with RBAC, MFA and users initialized successfully.")
 
 if __name__ == "__main__":
     init_db()

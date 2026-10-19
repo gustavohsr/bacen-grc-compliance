@@ -46,27 +46,48 @@ O sistema monitora e audita individualmente cada um dos 14 novos controles manda
 
 ---
 
-## 💻 3. Módulos do Sistema Web
+### 3.1. Controle de Acesso Baseado em Papéis (RBAC) & Menor Privilégio
+O sistema implementa autenticação segura com **PBKDF2-SHA256 (100.000 iterações)**, sessões temporizadas criptográficas e **MFA Mandatório (RFC 6238 TOTP de 6 dígitos)** em consonância com o Controle Mandatório nº 01 da Resolução CMN nº 5.274:
 
-### 3.1. Cadastro da Empresa a ser Avaliada (Multi-Instituição)
+* 👑 **Administrador Geral (`admin_geral`):**
+  Acesso irrestrito a todas as instituições financeiras cadastradas. Possui painel exclusivo de **Gestão Centralizada de Usuários (`/api/usuarios`)**, capacidade de alocar perfis institucionais e cadastrar novas empresas avaliadas.
+* 🛡️ **Gestor de Compliance / CISO (`gestor`):**
+  Gestão total da instituição vinculada. Aprovação de avaliações, edição de dados cadastrais da empresa e Unicad, governança executiva do CSIRT/PARI, gestão de fornecedores de nuvem (Art. 17) e emissão do Relatório Anual (Art. 8º).
+* ⚙️ **Analista de Segurança / Operador GRC (`analista`):**
+  Operação de conformidade da instituição alocada. Execução e pontuação de avaliações, upload de evidências no cofre, elaboração de planos de ação 5W2H e cadastro de simulados. Bloqueado para edição cadastral da empresa e exclusão de evidências.
+* 🔍 **Auditor Interno / Fiscal BACEN (`auditor`):**
+  Perfil estritamente **somente leitura (*read-only*)**. Permite inspeção regulatória de conformidade, consulta à integridade probatória de evidências (hashes SHA-256) e exportação de relatórios, sem qualquer privilégio de gravação ou alteração.
+
+#### 🔑 Credenciais Padrão para Demonstração e Homologação
+| Perfil | E-mail Institucional | Senha Padrão | Segredo MFA (Base32) |
+|:---|:---|:---|:---|
+| **👑 Admin Geral** | `admin@bacen.local` | `Admin@Bacen2026!` | `JBSWY3DPEHPK3PXP` |
+| **🛡️ Gestor CISO** | `gestor@alphabank.com.br` | `Gestor@2026!` | `JBSWY3DPEHPK3PXQ` |
+| **⚙️ Analista GRC** | `analista@alphabank.com.br` | `Analista@2026!` | `JBSWY3DPEHPK3PXR` |
+| **🔍 Auditor BACEN** | `auditor@bacen.gov.br` | `Auditor@2026!` | `JBSWY3DPEHPK3PXS` |
+
+> [!TIP]
+> A tela de login disponibiliza botões de clique rápido com as credenciais pré-configuradas e assistente de preenchimento do código TOTP gerado em tempo real pelo servidor para validação instantânea sem atrito.
+
+### 3.2. Cadastro da Empresa a ser Avaliada (Multi-Instituição Granular)
 * **Sem dados fixos ou pressupostos:** Permite cadastrar a Razão Social, Nome Fantasia, CNPJ e o nome real do **Diretor Estatutário perante o BACEN**.
 * **Enquadramento no SFN:** Segmentos S1 a S5 com explicação da regra de proporcionalidade (Resolução CMN nº 4.553).
 * **Homologação Unicad:** Registro oficial do Diretor perante o BACEN, cargo, e-mail institucional e contatos.
 * **Governança:** Data de aprovação da política pelo Conselho de Administração (Art. 9º), data da última revisão anual (Art. 10) e escopo de atuação.
-* **Gestão Multi-Empresa:** Permite cadastrar e alternar entre diferentes instituições financeiras avaliadas através de seletor dinâmico.
+* **Gestão Multi-Empresa:** Permite cadastrar e alternar entre diferentes instituições financeiras avaliadas de acordo com as permissões do usuário logado.
 
-### 3.2. Dashboard Executivo & KPIs
+### 3.3. Dashboard Executivo & KPIs
 * **Score Global de Compliance:** Percentual ponderado de aderência aos requisitos regulatórios em tempo real.
 * **Contadores por Status:** Atendidos, Parcialmente Atendidos, Em Implementação, Não Atendidos e Não Aplicáveis.
 * **Painel Especial Resolução 5.274:** Painel interativo com status e pontuação dos 14 controles técnicos.
 * **Maturidade por Domínio:** Gráficos de barras por domínio da norma e indicadores de prontidão do PARI.
 
-### 3.3. Matriz de Compliance GRC
+### 3.4. Matriz de Compliance GRC
 * Visão tabular com os 32 requisitos normativos organizados pelos 7 domínios da norma.
 * Filtros dinâmicos por Domínio, Status, Severidade, busca por palavra-chave e filtro rápido para os 14 controles da 5.274.
 * **Modal de Auditoria:** Edição interativa do status de conformidade, barra deslizante de aderência (0-100%), justificativa técnica da instituição, prazo de adequação e parecer do auditor.
 
-### 3.4. Módulo Dedicado: Plano de Ação e Resposta a Incidentes (PARI)
+### 3.5. Módulo Dedicado: Plano de Ação e Resposta a Incidentes (PARI)
 Estruturado com base nos **Arts. 6º e 8º da Resolução CMN 4.893/2021**:
 * **Governança do CSIRT & Plantão 24x7:** Líder do CSIRT, e-mail, telefone de plantão, membros técnicos multidisciplinares, comitê de crise executivo e canais de comunicação de emergência fora da rede (*out-of-band*).
 * **Playbooks Operacionais por Ameaça:** Procedimentos em 5 fases (Detecção, Contenção Imediata, Erradicação, Recuperação e Comunicação ao BACEN) para:
@@ -79,13 +100,13 @@ Estruturado com base nos **Arts. 6º e 8º da Resolução CMN 4.893/2021**:
 * **Exercícios e Simulados de Mesa (Tabletop Drills):** Registro de simulações periódicas com a Diretoria Executiva, tempo de resposta alcançado (RTO), pontos fortes e ações de melhoria.
 * **Registro de Incidentes Reais:** Histórico de eventos de segurança tratados.
 
-### 3.5. Cofre de Evidências Regulatórias (Evidence Vault)
+### 3.6. Cofre de Evidências Regulatórias (Evidence Vault)
 * Upload e vínculo direto de evidências técnicas com os requisitos normativos.
 * **Geração Automática de Hash SHA-256:** Garantia de integridade para fins de fiscalização e auditoria externa.
 * Classificação por tipo (Políticas, Relatórios de Pentest, Logs de Auditoria, Atas de Reunião, Contratos Cloud).
 * Download direto e verificação do status de validação.
 
-### 3.6. Gestão de Contratação de Nuvem (Arts. 11 a 17)
+### 3.7. Gestão de Contratação de Nuvem (Arts. 11 a 17)
 * Cadastro de provedores relevantes de nuvem (AWS, Microsoft Azure, Salesforce, etc.).
 * Checklist de aderência às cláusulas obrigatórias do Art. 17:
   * Indicação formal dos países de armazenamento e processamento;
@@ -94,16 +115,16 @@ Estruturado com base nos **Arts. 6º e 8º da Resolução CMN 4.893/2021**:
   * Notificação prévia ao BACEN com 60 dias de antecedência (Art. 15);
   * Plano de descontinuidade e reversibilidade tecnológica (Art. 20).
 
-### 3.7. Planos de Ação 5W2H
+### 3.8. Planos de Ação 5W2H
 * Mapeamento estruturado para remediação de gaps identificados (O quê, Por quê, Onde, Quem, Quando, Como, Quanto).
 * Monitoramento visual de progresso percentual e status de implementação.
 
-### 3.8. Relatório Anual Oficial do Artigo 8º
+### 3.9. Relatório Anual Oficial do Artigo 8º
 * Geração do documento oficial anual exigido com data-base em **31 de dezembro**.
 * Apresenta o parecer executivo, avaliação dos 14 controles da 5.274, histórico do PARI, testes de invasão e a declaração formal com assinatura do **Diretor Estatutário**.
 * Otimizado para impressão direta e exportação em PDF (`window.print()`).
 
-### 3.9. Trilha de Auditoria (Audit Log)
+### 3.10. Trilha de Auditoria (Audit Log)
 * Registro imutável de todas as ações executadas no sistema (criação de evidências, alterações de status, revisões cadastrais) com data, hora e usuário responsável.
 
 ---

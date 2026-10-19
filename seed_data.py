@@ -14,6 +14,9 @@ def seed():
     cursor = conn.cursor()
 
     # Clear existing
+    cursor.execute("DELETE FROM sessoes;")
+    cursor.execute("DELETE FROM usuario_instituicoes;")
+    cursor.execute("DELETE FROM usuarios;")
     cursor.execute("DELETE FROM auditoria_log;")
     cursor.execute("DELETE FROM incidentes;")
     cursor.execute("DELETE FROM pari_simulados;")
@@ -26,6 +29,41 @@ def seed():
     cursor.execute("DELETE FROM requisitos;")
     cursor.execute("DELETE FROM dominios;")
     cursor.execute("DELETE FROM instituicao;")
+
+    # 0. Usuários e RBAC (Least Privilege & MFA)
+    from auth import hash_password, generate_mfa_secret
+
+    salt_admin, hash_admin = hash_password("Admin@Bacen2026!")
+    salt_gestor, hash_gestor = hash_password("Gestor@2026!")
+    salt_analista, hash_analista = hash_password("Analista@2026!")
+    salt_auditor, hash_auditor = hash_password("Auditor@2026!")
+
+    # Secrets fixos de fácil visualização inicial (mas válidos RFC 6238)
+    mfa_admin = "JBSWY3DPEHPK3PXP"
+    mfa_gestor = "JBSWY3DPEHPK3PXQ"
+    mfa_analista = "JBSWY3DPEHPK3PXR"
+    mfa_auditor = "JBSWY3DPEHPK3PXS"
+
+    cursor.execute("""
+    INSERT INTO usuarios (id, nome, email, senha_hash, senha_salt, is_admin_geral, mfa_habilitado, mfa_secret, ativo, cargo)
+    VALUES
+    (1, 'Administrador Geral GRC', 'admin@bacen.local', ?, ?, 1, 1, ?, 1, 'Administrador da Plataforma'),
+    (2, 'Roberto Silveira Mello', 'gestor@alphabank.com.br', ?, ?, 0, 1, ?, 1, 'Diretor Executivo de Riscos / CISO'),
+    (3, 'Felipe Albuquerque', 'analista@alphabank.com.br', ?, ?, 0, 1, ?, 1, 'Analista Sênior de Cibersegurança'),
+    (4, 'Dr. Marcelo Nogueira', 'auditor@bacen.gov.br', ?, ?, 0, 1, ?, 1, 'Auditor Fiscal do Banco Central');
+    """, (hash_admin, salt_admin, mfa_admin,
+          hash_gestor, salt_gestor, mfa_gestor,
+          hash_analista, salt_analista, mfa_analista,
+          hash_auditor, salt_auditor, mfa_auditor))
+
+    # Vínculos com a Instituição 1
+    cursor.execute("""
+    INSERT INTO usuario_instituicoes (usuario_id, instituicao_id, perfil)
+    VALUES
+    (2, 1, 'gestor'),
+    (3, 1, 'analista'),
+    (4, 1, 'auditor');
+    """)
 
     # 1. Instituição Financeira Avaliada (Configurável)
     cursor.execute("""

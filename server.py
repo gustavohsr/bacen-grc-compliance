@@ -1,11 +1,16 @@
 """
 Enterprise-grade Web Server and REST API for BACEN CMN 4.893 & 5.274 Compliance GRC.
 Features:
-- Multi-company / Institution Registration & Customization (No assumed/hardcoded names)
-- Dedicated PARI Module (Plano de Ação e de Resposta a Incidentes - Arts. 6º e 8º)
+- Role-Based Access Control (RBAC) & Least Privilege:
+  * Admin Geral (Superadministrador global)
+  * Gestor de Compliance / CISO (Gestão completa na instituição atribuída)
+  * Analista / Operador (Alimentação de evidências e planos de ação)
+  * Auditor / Fiscal BACEN (Somente leitura de requisitos, evidências e relatórios)
+- Multi-Institution User Mapping (perfil granular por instituição)
+- Authentication with PBKDF2-SHA256 password hashing & RFC 6238 TOTP (MFA 6 dígitos)
+- Dedicated PARI Module (Arts. 6º e 8º)
 - 14 Mandatory Minimum Controls of Resolução CMN nº 5.274/2025
 - Evidence Vault with SHA-256 integrity calculation
-- Real-time Dashboards, KPIs and Annual Report Generator
 """
 import http.server
 import socketserver
@@ -16,6 +21,11 @@ import urllib.parse
 import mimetypes
 import hashlib
 from datetime import datetime
+
+from auth import (
+    hash_password, verify_password, generate_session_token,
+    generate_mfa_secret, verify_totp, get_totp_code
+)
 
 PORT = 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +46,66 @@ def dict_from_row(row):
         return None
     return {k: row[k] for k in row.keys()}
 
-def get_active_institution_id(cursor):
+def get_authenticated_user(cursor, token):
+    if not token:
+        return None
+    cursor.execute("""
+    SELECT u.*, s.mfa_verificado, s.token as session_token
+    FROM sessoes s
+    JOIN usuarios u ON s.usuario_id = u.id
+    WHERE s.token = ? AND datetime(s.expira_em) > datetime('now') AND u.ativo = 1;
+    """, (token,))
+    row = cursor.fetchone()
+    return dict_from_row(row)
+
+def get_user_role_for_institution(cursor, user, inst_id):
+    if not user:
+        return None
+    if user.get('is_admin_geral') == 1:
+        return 'admin_geral'
+    cursor.execute("""
+    SELECT perfil FROM usuario_instituicoes
+    WHERE usuario_id = ? AND instituicao_id = ?;
+    """, (user['id'], inst_id))
+    row = cursor.fetchone()
+    return row['perfil'] if row else None
+
+def get_accessible_institutions(cursor, user):
+    if not user:
+        return []
+    if user.get('is_admin_geral') == 1:
+        cursor.execute("SELECT *, 'admin_geral' as perfil_usuario FROM instituicao ORDER BY is_ativa DESC, id ASC;")
+        return [dict_from_row(r) for r in cursor.fetchall()]
+    cursor.execute("""
+    SELECT i.*, ui.perfil as perfil_usuario
+    FROM instituicao i
+    JOIN usuario_instituicoes ui ON ui.instituicao_id = i.id
+    WHERE ui.usuario_id = ?
+    ORDER BY i.is_ativa DESC, i.id ASC;
+    """, (user['id'],))
+    return [dict_from_row(r) for r in cursor.fetchall()]
+
+def get_active_institution_id(cursor, user=None):
+    if user and user.get('is_admin_geral') != 1:
+        # Check active institution that this user actually has permission to access
+        cursor.execute("""
+        SELECT i.id FROM instituicao i
+        JOIN usuario_instituicoes ui ON ui.instituicao_id = i.id
+        WHERE ui.usuario_id = ? AND i.is_ativa = 1
+        LIMIT 1;
+        """, (user['id'],))
+        row = cursor.fetchone()
+        if row:
+            return row['id']
+        cursor.execute("""
+        SELECT i.id FROM instituicao i
+        JOIN usuario_instituicoes ui ON ui.instituicao_id = i.id
+        WHERE ui.usuario_id = ?
+        ORDER BY i.id ASC LIMIT 1;
+        """, (user['id'],))
+        row = cursor.fetchone()
+        return row['id'] if row else 1
+
     cursor.execute("SELECT id FROM instituicao WHERE is_ativa = 1 LIMIT 1;")
     row = cursor.fetchone()
     if row:
@@ -64,7 +133,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.end_headers()
         self.wfile.write(body)
 
@@ -72,8 +141,40 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.end_headers()
+
+    def get_token(self):
+        auth_header = self.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            return auth_header[len('Bearer '):].strip()
+        cookie_header = self.headers.get('Cookie', '')
+        if 'session_token=' in cookie_header:
+            parts = cookie_header.split(';')
+            for p in parts:
+                p = p.strip()
+                if p.startswith('session_token='):
+                    return p.split('=', 1)[1].strip()
+        return None
+
+    def check_auth(self, cursor, inst_id, allowed_roles):
+        token = self.get_token()
+        user = get_authenticated_user(cursor, token)
+        if not user:
+            return False, 401, "Sessão inválida ou expirada. Efetue login.", None, None
+        if user.get('mfa_habilitado') and not user.get('mfa_verificado'):
+            return False, 403, "Segundo fator de autenticação (MFA) pendente.", user, None
+
+        if user.get('is_admin_geral') == 1:
+            return True, 200, "OK", user, "admin_geral"
+
+        role = get_user_role_for_institution(cursor, user, inst_id)
+        if not role:
+            return False, 403, "Acesso negado: Você não possui permissão para acessar esta instituição financeira.", user, None
+        if allowed_roles and role not in allowed_roles:
+            return False, 403, f"Acesso negado: Seu perfil ('{role}') não possui permissão para esta operação.", user, role
+
+        return True, 200, "OK", user, role
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -101,38 +202,106 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         cursor = conn.cursor()
 
         try:
-            inst_id = get_active_institution_id(cursor)
+            token = self.get_token()
+            user = get_authenticated_user(cursor, token)
 
-            # 1. INSTITUICOES (Multi-empresa)
-            if path == "/api/instituicoes":
-                cursor.execute("SELECT * FROM instituicao ORDER BY is_ativa DESC, id ASC;")
-                rows = [dict_from_row(r) for r in cursor.fetchall()]
-                self.send_json(rows)
+            # 1. AUTH ROUTES (Públicas ou Autenticadas)
+            if path == "/api/auth/me":
+                if not user or (user.get('mfa_habilitado') and not user.get('mfa_verificado')):
+                    self.send_json({"authenticated": False}, 401)
+                    return
+                insts = get_accessible_institutions(cursor, user)
+                active_id = get_active_institution_id(cursor, user)
+                active_role = get_user_role_for_institution(cursor, user, active_id)
+                self.send_json({
+                    "authenticated": True,
+                    "user": {
+                        "id": user['id'],
+                        "nome": user['nome'],
+                        "email": user['email'],
+                        "cargo": user['cargo'],
+                        "is_admin_geral": bool(user['is_admin_geral']),
+                        "mfa_secret": user['mfa_secret']
+                    },
+                    "instituicao_ativa_id": active_id,
+                    "perfil_ativo": active_role,
+                    "instituicoes": insts
+                })
+                return
+
+            # Exige autenticação básica para qualquer endpoint a partir daqui
+            if not user or (user.get('mfa_habilitado') and not user.get('mfa_verificado')):
+                self.send_json({"error": "Não autenticado. Efetue login com usuário, senha e MFA."}, 401)
+                return
+
+            inst_id = get_active_institution_id(cursor, user)
+
+            # 2. GESTÃO DE USUÁRIOS E RBAC (Apenas Admin Geral)
+            if path == "/api/usuarios":
+                if user.get('is_admin_geral') != 1:
+                    self.send_json({"error": "Acesso restrito ao Administrador Geral da aplicação."}, 403)
+                    return
+                cursor.execute("""
+                SELECT id, nome, email, is_admin_geral, mfa_habilitado, mfa_secret, ativo, cargo, ultimo_login, created_at
+                FROM usuarios
+                ORDER BY is_admin_geral DESC, nome ASC;
+                """)
+                usuarios = [dict_from_row(r) for r in cursor.fetchall()]
+                for u in usuarios:
+                    cursor.execute("""
+                    SELECT ui.instituicao_id, ui.perfil, i.razao_social
+                    FROM usuario_instituicoes ui
+                    JOIN instituicao i ON ui.instituicao_id = i.id
+                    WHERE ui.usuario_id = ?;
+                    """, (u['id'],))
+                    u['instituicoes'] = [dict_from_row(r) for r in cursor.fetchall()]
+                self.send_json(usuarios)
+                return
+
+            # 3. INSTITUIÇÕES ACESSÍVEIS (Filtradas pelo menor privilégio do usuário)
+            elif path == "/api/instituicoes":
+                insts = get_accessible_institutions(cursor, user)
+                self.send_json(insts)
+                return
 
             elif path == "/api/instituicao" or path == "/api/instituicao/ativa":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 cursor.execute("SELECT * FROM instituicao WHERE id = ?;", (inst_id,))
                 row = cursor.fetchone()
-                self.send_json(dict_from_row(row) if row else {})
+                inst_data = dict_from_row(row) if row else {}
+                if inst_data:
+                    inst_data['perfil_usuario'] = role
+                self.send_json(inst_data)
+                return
 
-            elif path.startswith("/api/instituicao/"):
-                req_inst_id = path.split("/")[-1]
-                cursor.execute("SELECT * FROM instituicao WHERE id = ?;", (req_inst_id,))
-                row = cursor.fetchone()
-                self.send_json(dict_from_row(row) if row else {}, 200 if row else 404)
-
-            # 2. DASHBOARD
+            # 4. DASHBOARD (Acessível a todos os perfis autorizados na instituição)
             elif path == "/api/dashboard":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 data = self.get_dashboard_metrics(cursor, inst_id)
+                data['perfil_usuario'] = role
                 self.send_json(data)
+                return
 
-            # 3. DOMÍNIOS
+            # 5. DOMÍNIOS
             elif path == "/api/dominios":
                 cursor.execute("SELECT * FROM dominios ORDER BY ordem ASC;")
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
+                return
 
-            # 4. REQUISITOS & AVALIAÇÕES
+            # 6. REQUISITOS (Com filtros)
             elif path == "/api/requisitos":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 dominio_id = query.get('dominio_id', [None])[0]
                 status = query.get('status', [None])[0]
                 is_5274 = query.get('is_cmn_5274', [None])[0]
@@ -170,8 +339,14 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 cursor.execute(sql, params)
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
+                return
 
             elif path.startswith("/api/requisitos/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 req_id = path.split("/")[-1]
                 cursor.execute("""
                 SELECT r.*, d.nome as dominio_nome, d.codigo as dominio_codigo,
@@ -196,16 +371,23 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 cursor.execute("SELECT * FROM planos_acao WHERE requisito_id = ? AND instituicao_id = ? ORDER BY id DESC;", (req_id, inst_id))
                 req_data['planos_acao'] = [dict_from_row(r) for r in cursor.fetchall()]
 
+                req_data['perfil_usuario'] = role
                 self.send_json(req_data)
+                return
 
-            # 5. MÓDULO PARI
+            # 7. PARI (Acessível para consulta a todos os perfis)
             elif path == "/api/pari":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 cursor.execute("SELECT * FROM pari_governanca WHERE instituicao_id = ? LIMIT 1;", (inst_id,))
                 gov = dict_from_row(cursor.fetchone())
                 if not gov:
                     cursor.execute("""
                     INSERT INTO pari_governanca (instituicao_id, lider_csirt, email_csirt, telefone_plantao_247)
-                    VALUES (?, 'Coordenador CSIRT', 'csirt@instituicao.com.br', '(11) 90000-0000');
+                    VALUES (?, 'Coordenador CSIRT', 'csirt@empresa.com.br', '(11) 90000-0000');
                     """, (inst_id,))
                     conn.commit()
                     cursor.execute("SELECT * FROM pari_governanca WHERE instituicao_id = ? LIMIT 1;", (inst_id,))
@@ -224,11 +406,18 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     "governanca": gov,
                     "playbooks": playbooks,
                     "simulados": simulados,
-                    "incidentes": incidentes
+                    "incidentes": incidentes,
+                    "perfil_usuario": role
                 })
+                return
 
-            # 6. EVIDÊNCIAS
+            # 8. EVIDÊNCIAS
             elif path == "/api/evidencias":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 requisito_id = query.get('requisito_id', [None])[0]
                 sql = """
                 SELECT e.*, r.codigo as requisito_codigo, r.titulo as requisito_titulo, r.artigo
@@ -244,9 +433,14 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 cursor.execute(sql, params)
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
+                return
 
-            # 7. PLANOS DE AÇÃO 5W2H
+            # 9. PLANOS DE AÇÃO
             elif path == "/api/planos_acao":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 cursor.execute("""
                 SELECT p.*, r.codigo as requisito_codigo, r.titulo as requisito_titulo, r.artigo
                 FROM planos_acao p
@@ -256,36 +450,67 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 """, (inst_id,))
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
+                return
 
-            # 8. FORNECEDORES DE NUVEM
+            # 10. FORNECEDORES DE NUVEM
             elif path == "/api/fornecedores_nuvem":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 cursor.execute("SELECT * FROM fornecedores_nuvem WHERE instituicao_id = ? ORDER BY id ASC;", (inst_id,))
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
+                return
 
-            # 9. INCIDENTES
+            # 11. INCIDENTES
             elif path == "/api/incidentes":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 cursor.execute("SELECT * FROM incidentes WHERE instituicao_id = ? ORDER BY data_ocorrencia DESC;", (inst_id,))
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
+                return
 
-            # 10. RELATÓRIO ANUAL (ART. 8º)
+            # 12. RELATÓRIO ANUAL (ART. 8º)
             elif path == "/api/relatorio_anual":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 relatorio = self.generate_annual_report(cursor, inst_id)
                 self.send_json(relatorio)
+                return
 
-            # 11. AUDIT LOG
+            # 13. AUDITORIA LOG
             elif path == "/api/auditoria_log":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 cursor.execute("SELECT * FROM auditoria_log ORDER BY id DESC LIMIT 100;")
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
+                return
 
-            # 12. EXPORTADORES
+            # 14. EXPORTAÇÃO
             elif path == "/api/export/csv":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 self.export_csv(cursor, inst_id)
+                return
 
             elif path == "/api/export/json":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 self.export_full_json(cursor, inst_id)
+                return
 
             else:
                 self.send_json({"error": "Endpoint não encontrado"}, 404)
@@ -302,10 +527,169 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             raw_body = self.rfile.read(content_length)
-            inst_id = get_active_institution_id(cursor)
 
-            # 1. CADASTRAR NOVA INSTITUIÇÃO
-            if path == "/api/instituicoes":
+            # 1. AUTENTICAÇÃO: LOGIN (Público)
+            if path == "/api/auth/login":
+                payload = json.loads(raw_body.decode('utf-8'))
+                email = payload.get('email', '').strip().lower()
+                password = payload.get('password', '')
+
+                cursor.execute("SELECT * FROM usuarios WHERE LOWER(email) = ? AND ativo = 1;", (email,))
+                user = dict_from_row(cursor.fetchone())
+
+                if not user or not verify_password(password, user['senha_salt'], user['senha_hash']):
+                    cursor.execute("""
+                    INSERT INTO auditoria_log (usuario, acao, entidade, detalhes)
+                    VALUES (?, 'FALHA_LOGIN', 'auth', 'Tentativa de autenticação com credenciais incorretas.');
+                    """, (email or 'Desconhecido',))
+                    conn.commit()
+                    self.send_json({"error": "Credenciais incorretas. Verifique seu e-mail e senha."}, 401)
+                    return
+
+                token = generate_session_token()
+                cursor.execute("""
+                INSERT INTO sessoes (token, usuario_id, expira_em, mfa_verificado)
+                VALUES (?, ?, datetime('now', '+1 day'), 0);
+                """, (token, user['id']))
+                conn.commit()
+
+                # Fornece a chave TOTP e código preview para facilitar pareamento e testes locais
+                totp_now = get_totp_code(user['mfa_secret'])
+
+                self.send_json({
+                    "token": token,
+                    "mfa_required": bool(user['mfa_habilitado']),
+                    "mfa_secret": user['mfa_secret'],
+                    "totp_preview": totp_now,
+                    "user": {
+                        "id": user['id'],
+                        "nome": user['nome'],
+                        "email": user['email'],
+                        "cargo": user['cargo'],
+                        "is_admin_geral": bool(user['is_admin_geral'])
+                    }
+                })
+                return
+
+            # 2. AUTENTICAÇÃO: VALIDAÇÃO MFA / TOTP (Público mediante token de sessão pendente)
+            elif path == "/api/auth/mfa":
+                payload = json.loads(raw_body.decode('utf-8'))
+                token = payload.get('token', '').strip()
+                code = payload.get('code', '').strip()
+
+                cursor.execute("""
+                SELECT u.*, s.token FROM sessoes s
+                JOIN usuarios u ON s.usuario_id = u.id
+                WHERE s.token = ? AND datetime(s.expira_em) > datetime('now');
+                """, (token,))
+                user = dict_from_row(cursor.fetchone())
+
+                if not user:
+                    self.send_json({"error": "Sessão inválida ou expirada."}, 401)
+                    return
+
+                if not verify_totp(user['mfa_secret'], code):
+                    cursor.execute("""
+                    INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                    VALUES (?, 'FALHA_MFA', 'usuarios', ?, 'Código TOTP de 6 dígitos inválido ou expirado.');
+                    """, (user['email'], user['id']))
+                    conn.commit()
+                    self.send_json({"error": "Código MFA incorreto ou expirado. Verifique o horário do seu dispositivo."}, 400)
+                    return
+
+                cursor.execute("UPDATE sessoes SET mfa_verificado = 1 WHERE token = ?;", (token,))
+                cursor.execute("UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = ?;", (user['id'],))
+
+                cursor.execute("""
+                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                VALUES (?, 'LOGIN_SUCESSO', 'usuarios', ?, 'Autenticação multifator validada com sucesso.');
+                """, (user['email'], user['id']))
+                conn.commit()
+
+                insts = get_accessible_institutions(cursor, user)
+                active_id = get_active_institution_id(cursor, user)
+                active_role = get_user_role_for_institution(cursor, user, active_id)
+
+                self.send_json({
+                    "success": True,
+                    "user": {
+                        "id": user['id'],
+                        "nome": user['nome'],
+                        "email": user['email'],
+                        "cargo": user['cargo'],
+                        "is_admin_geral": bool(user['is_admin_geral'])
+                    },
+                    "instituicao_ativa_id": active_id,
+                    "perfil_ativo": active_role,
+                    "instituicoes": insts
+                })
+                return
+
+            # 3. LOGOUT
+            elif path == "/api/auth/logout":
+                token = self.get_token()
+                if token:
+                    cursor.execute("DELETE FROM sessoes WHERE token = ?;", (token,))
+                    conn.commit()
+                self.send_json({"success": True})
+                return
+
+            # Para todas as rotas POST restantes, exige autenticação e RBAC
+            token = self.get_token()
+            user = get_authenticated_user(cursor, token)
+            if not user or (user.get('mfa_habilitado') and not user.get('mfa_verificado')):
+                self.send_json({"error": "Não autenticado ou MFA pendente."}, 401)
+                return
+
+            inst_id = get_active_institution_id(cursor, user)
+
+            # 4. GESTÃO DE USUÁRIOS (Admin Geral ONLY)
+            if path == "/api/usuarios":
+                if user.get('is_admin_geral') != 1:
+                    self.send_json({"error": "Acesso restrito ao Administrador Geral."}, 403)
+                    return
+
+                payload = json.loads(raw_body.decode('utf-8'))
+                nome = payload.get('nome')
+                email = payload.get('email', '').strip().lower()
+                senha = payload.get('senha', 'SenhaInicial@2026!')
+                is_admin = 1 if payload.get('is_admin_geral') else 0
+                cargo = payload.get('cargo', 'Analista de Segurança')
+                instituicoes_roles = payload.get('instituicoes', []) # lista de {instituicao_id, perfil}
+
+                salt, pwd_hash = hash_password(senha)
+                mfa_secret = generate_mfa_secret()
+
+                try:
+                    cursor.execute("""
+                    INSERT INTO usuarios (nome, email, senha_hash, senha_salt, is_admin_geral, mfa_habilitado, mfa_secret, ativo, cargo)
+                    VALUES (?, ?, ?, ?, ?, 1, ?, 1, ?);
+                    """, (nome, email, pwd_hash, salt, is_admin, mfa_secret, cargo))
+                    new_user_id = cursor.lastrowid
+
+                    for ir in instituicoes_roles:
+                        cursor.execute("""
+                        INSERT INTO usuario_instituicoes (usuario_id, instituicao_id, perfil)
+                        VALUES (?, ?, ?);
+                        """, (new_user_id, ir['instituicao_id'], ir['perfil']))
+
+                    cursor.execute("""
+                    INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                    VALUES (?, 'CRIAR_USUARIO', 'usuarios', ?, ?);
+                    """, (user['email'], new_user_id, f"Cadastrado usuário {nome} ({email}) com privilégios RBAC."))
+                    conn.commit()
+
+                    self.send_json({"success": True, "id": new_user_id, "mfa_secret": mfa_secret})
+                except sqlite3.IntegrityError:
+                    self.send_json({"error": "Já existe um usuário cadastrado com este e-mail."}, 400)
+                return
+
+            # 5. CADASTRAR NOVA INSTITUIÇÃO (Admin Geral ONLY)
+            elif path == "/api/instituicoes":
+                if user.get('is_admin_geral') != 1:
+                    self.send_json({"error": "Apenas o Administrador Geral pode cadastrar novas instituições."}, 403)
+                    return
+
                 payload = json.loads(raw_body.decode('utf-8'))
                 cursor.execute("""
                 INSERT INTO instituicao (
@@ -330,68 +714,57 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('escopo_operacional', '')
                 ))
                 new_id = cursor.lastrowid
-
-                # Desativar outras instituições
                 cursor.execute("UPDATE instituicao SET is_ativa = 0 WHERE id != ?;", (new_id,))
 
-                # Inicializar avaliações padrão para todos os requisitos
+                # Inicializar avaliações
                 cursor.execute("SELECT id FROM requisitos;")
-                all_reqs = cursor.fetchall()
-                for req in all_reqs:
+                for req in cursor.fetchall():
                     cursor.execute("""
                     INSERT OR IGNORE INTO avaliacoes (instituicao_id, requisito_id, status, percentual_aderencia)
                     VALUES (?, ?, 'nao_atendido', 0);
                     """, (new_id, req['id']))
 
-                # Inicializar governança PARI padrão
+                # Inicializar governança PARI
                 cursor.execute("""
                 INSERT INTO pari_governanca (
                     instituicao_id, lider_csirt, email_csirt, telefone_plantao_247,
                     membros_csirt, comite_crise, criterios_relevancia_bacen, procedimento_sisbacen
                 ) VALUES (?, 'Líder CSIRT', 'csirt@empresa.com.br', '(11) 99999-0000',
-                          'Equipe de Segurança da Informação, Redes e DBA',
-                          'Diretor Estatutário, CISO e Jurídico',
-                          'Incidentes que causem indisponibilidade de canais essenciais > 2h ou vazamento de dados.',
+                          'Equipe de Segurança, Redes e DBA', 'Diretoria Executiva e CISO',
+                          'Indisponibilidade de canais essenciais > 2h ou vazamento de dados.',
                           'Comunicação em até 24h via Sisbacen / Protocolo Digital.');
                 """, (new_id,))
 
-                # Inicializar playbooks básicos
-                default_playbooks = [
-                    ('PB-01', 'Ataque de Ransomware', 'Ransomware', 'Alertas de criptografia em massa no EDR.', 'Isolamento de rede das máquinas afetadas.', 'Remoção do malware e revogação de acessos.', 'Restauração de backups imutáveis.', 'Notificação no SISBACEN se houver impacto operacional.', 'Contenção em 15 min; RTO 4h.'),
-                    ('PB-02', 'Vazamento de Dados (LGPD & Sigilo Bancário)', 'Vazamento de Dados', 'Alertas de DLP ou Threat Intel de vazamento.', 'Bloqueio de credenciais e canais de exfiltração.', 'Análise forense e fechamento de brecha.', 'Reemissão forçada de credenciais.', 'Notificação simultânea ao BACEN e ANPD.', 'Análise de escopo em até 2h.')
-                ]
-                for dp in default_playbooks:
-                    cursor.execute("""
-                    INSERT INTO pari_playbooks (
-                        instituicao_id, codigo, titulo_cenario, categoria, etapa_deteccao,
-                        etapa_contencao, etapa_erradicacao, etapa_recuperacao, etapa_comunicacao_bacen, tempo_estimado_resposta
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """, (new_id, dp[0], dp[1], dp[2], dp[3], dp[4], dp[5], dp[6], dp[7], dp[8]))
-
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES ('Administrador', 'CRIAR_INSTITUICAO', 'instituicao', ?, ?);
-                """, (new_id, f"Cadastrada nova instituição {payload.get('razao_social')}."))
-
                 conn.commit()
                 self.send_json({"success": True, "id": new_id})
+                return
 
-            # ATIVAR INSTITUIÇÃO ESPECÍFICA
+            # ATIVAR INSTITUIÇÃO ESPECÍFICA (Apenas instituições que o usuário tem acesso)
             elif path.endswith("/ativar") and "/api/instituicao/" in path:
-                target_id = path.split("/")[-2]
+                target_id = int(path.split("/")[-2])
+                ok, code, err, _, _ = self.check_auth(cursor, target_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 cursor.execute("UPDATE instituicao SET is_ativa = 0;")
                 cursor.execute("UPDATE instituicao SET is_ativa = 1 WHERE id = ?;", (target_id,))
                 conn.commit()
                 self.send_json({"success": True, "ativo_id": target_id})
+                return
 
-            # 2. REGISTRAR EVIDÊNCIA
+            # 6. REGISTRAR EVIDÊNCIA (Admin Geral, Gestor, Analista - Auditor bloqueado)
             elif path == "/api/evidencias":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 payload = json.loads(raw_body.decode('utf-8'))
                 req_id = payload.get('requisito_id')
                 titulo = payload.get('titulo')
                 tipo = payload.get('tipo', 'Documento')
                 descricao = payload.get('descricao', '')
-                coletor = payload.get('coletor', 'Auditor Responsável')
+                coletor = user['nome']
                 link_ext = payload.get('link_externo')
                 nome_arq = payload.get('nome_arquivo', 'evidencia.txt')
                 conteudo_b64 = payload.get('conteudo_base64')
@@ -423,11 +796,22 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 """, (inst_id, req_id, titulo, tipo, descricao, nome_arq, caminho_arq, hash_sha256, tam_bytes, 'application/octet-stream', link_ext, coletor))
 
                 ev_id = cursor.lastrowid
+                cursor.execute("""
+                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                VALUES (?, 'CRIAR_EVIDENCIA', 'evidencias', ?, ?);
+                """, (user['email'], ev_id, f"Registrada evidência '{titulo}' para requisito ID {req_id} com hash SHA-256 {hash_sha256[:16]}..."))
                 conn.commit()
-                self.send_json({"success": True, "id": ev_id, "hash_sha256": hash_sha256})
 
-            # 3. PLANOS DE AÇÃO 5W2H
+                self.send_json({"success": True, "id": ev_id, "hash_sha256": hash_sha256})
+                return
+
+            # 7. PLANO DE AÇÃO 5W2H (Admin Geral, Gestor, Analista)
             elif path == "/api/planos_acao":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 payload = json.loads(raw_body.decode('utf-8'))
                 cursor.execute("""
                 INSERT INTO planos_acao (
@@ -450,9 +834,15 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 p_id = cursor.lastrowid
                 conn.commit()
                 self.send_json({"success": True, "id": p_id})
+                return
 
-            # 4. FORNECEDORES DE NUVEM
+            # 8. FORNECEDORES DE NUVEM (Admin Geral, Gestor)
             elif path == "/api/fornecedores_nuvem":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 payload = json.loads(raw_body.decode('utf-8'))
                 cursor.execute("""
                 INSERT INTO fornecedores_nuvem (
@@ -482,9 +872,15 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 f_id = cursor.lastrowid
                 conn.commit()
                 self.send_json({"success": True, "id": f_id})
+                return
 
-            # 5. PARI PLAYBOOKS
+            # 9. PLAYBOOKS PARI (Admin Geral, Gestor, Analista)
             elif path == "/api/pari/playbooks":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 payload = json.loads(raw_body.decode('utf-8'))
                 cursor.execute("""
                 INSERT INTO pari_playbooks (
@@ -506,9 +902,15 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 pb_id = cursor.lastrowid
                 conn.commit()
                 self.send_json({"success": True, "id": pb_id})
+                return
 
-            # 6. PARI SIMULADOS (TABLETOP DRILLS)
+            # 10. SIMULADOS PARI (Admin Geral, Gestor, Analista)
             elif path == "/api/pari/simulados":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 payload = json.loads(raw_body.decode('utf-8'))
                 cursor.execute("""
                 INSERT INTO pari_simulados (
@@ -530,9 +932,15 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 sim_id = cursor.lastrowid
                 conn.commit()
                 self.send_json({"success": True, "id": sim_id})
+                return
 
-            # 7. INCIDENTES
+            # 11. INCIDENTES (Admin Geral, Gestor, Analista)
             elif path == "/api/incidentes":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 payload = json.loads(raw_body.decode('utf-8'))
                 cursor.execute("""
                 INSERT INTO incidentes (
@@ -559,6 +967,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 inc_id = cursor.lastrowid
                 conn.commit()
                 self.send_json({"success": True, "id": inc_id})
+                return
 
             else:
                 self.send_json({"error": "Endpoint não encontrado"}, 404)
@@ -576,13 +985,69 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             raw_body = self.rfile.read(content_length)
             payload = json.loads(raw_body.decode('utf-8'))
-            inst_id = get_active_institution_id(cursor)
 
-            # 1. ATUALIZAR INSTITUIÇÃO ATIVA
+            token = self.get_token()
+            user = get_authenticated_user(cursor, token)
+            if not user or (user.get('mfa_habilitado') and not user.get('mfa_verificado')):
+                self.send_json({"error": "Não autenticado ou MFA pendente."}, 401)
+                return
+
+            inst_id = get_active_institution_id(cursor, user)
+
+            # 1. ATUALIZAR USUÁRIO (Admin Geral ONLY)
+            if path.startswith("/api/usuarios/"):
+                if user.get('is_admin_geral') != 1:
+                    self.send_json({"error": "Apenas o Administrador Geral pode alterar usuários."}, 403)
+                    return
+                target_user_id = int(path.split("/")[-1])
+                nome = payload.get('nome')
+                email = payload.get('email', '').strip().lower()
+                cargo = payload.get('cargo')
+                is_admin = 1 if payload.get('is_admin_geral') else 0
+                ativo = 1 if payload.get('ativo', True) else 0
+                senha = payload.get('senha')
+                instituicoes = payload.get('instituicoes', [])
+
+                if senha:
+                    salt, pwd_hash = hash_password(senha)
+                    cursor.execute("""
+                    UPDATE usuarios
+                    SET nome = ?, email = ?, cargo = ?, is_admin_geral = ?, ativo = ?, senha_hash = ?, senha_salt = ?
+                    WHERE id = ?;
+                    """, (nome, email, cargo, is_admin, ativo, pwd_hash, salt, target_user_id))
+                else:
+                    cursor.execute("""
+                    UPDATE usuarios
+                    SET nome = ?, email = ?, cargo = ?, is_admin_geral = ?, ativo = ?
+                    WHERE id = ?;
+                    """, (nome, email, cargo, is_admin, ativo, target_user_id))
+
+                # Atualizar vínculos de instituições
+                cursor.execute("DELETE FROM usuario_instituicoes WHERE usuario_id = ?;", (target_user_id,))
+                for ir in instituicoes:
+                    cursor.execute("""
+                    INSERT INTO usuario_instituicoes (usuario_id, instituicao_id, perfil)
+                    VALUES (?, ?, ?);
+                    """, (target_user_id, ir['instituicao_id'], ir['perfil']))
+
+                cursor.execute("""
+                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                VALUES (?, 'ATUALIZAR_USUARIO', 'usuarios', ?, ?);
+                """, (user['email'], target_user_id, f"Atualizado cadastro e permissões RBAC de {nome}."))
+                conn.commit()
+                self.send_json({"success": True, "id": target_user_id})
+                return
+
+            # 2. ATUALIZAR DADOS CADASTRAIS DA EMPRESA (Admin Geral ou Gestor)
             if path == "/api/instituicao" or path.startswith("/api/instituicao/"):
-                target_id = inst_id
+                target_inst_id = inst_id
                 if path.startswith("/api/instituicao/") and path.split("/")[-1].isdigit():
-                    target_id = int(path.split("/")[-1])
+                    target_inst_id = int(path.split("/")[-1])
+
+                ok, code, err, _, role = self.check_auth(cursor, target_inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
 
                 cursor.execute("""
                 UPDATE instituicao
@@ -606,19 +1071,23 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('data_ultima_revisao'),
                     payload.get('versao_politica'),
                     payload.get('escopo_operacional'),
-                    target_id
+                    target_inst_id
                 ))
-
                 cursor.execute("""
                 INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
                 VALUES (?, 'ATUALIZAR_INSTITUICAO', 'instituicao', ?, ?);
-                """, (payload.get('diretor_responsavel', 'Administrador'), target_id, f"Atualizados dados cadastrais da empresa {payload.get('razao_social')}."))
-
+                """, (user['email'], target_inst_id, f"Atualização cadastral da instituição {payload.get('razao_social')}."))
                 conn.commit()
-                self.send_json({"success": True, "id": target_id})
+                self.send_json({"success": True, "id": target_inst_id})
+                return
 
-            # 2. ATUALIZAR GOVERNANÇA DO PARI
+            # 3. ATUALIZAR GOVERNANÇA DO PARI (Admin Geral ou Gestor)
             elif path == "/api/pari/governanca":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 cursor.execute("""
                 UPDATE pari_governanca
                 SET lider_csirt = ?, email_csirt = ?, telefone_plantao_247 = ?, membros_csirt = ?,
@@ -640,39 +1109,22 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 ))
                 conn.commit()
                 self.send_json({"success": True})
+                return
 
-            # 3. ATUALIZAR PLAYBOOK DO PARI
-            elif path.startswith("/api/pari/playbooks/"):
-                pb_id = path.split("/")[-1]
-                cursor.execute("""
-                UPDATE pari_playbooks
-                SET titulo_cenario = ?, categoria = ?, etapa_deteccao = ?, etapa_contencao = ?,
-                    etapa_erradicacao = ?, etapa_recuperacao = ?, etapa_comunicacao_bacen = ?, tempo_estimado_resposta = ?
-                WHERE id = ? AND instituicao_id = ?;
-                """, (
-                    payload.get('titulo_cenario'),
-                    payload.get('categoria'),
-                    payload.get('etapa_deteccao'),
-                    payload.get('etapa_contencao'),
-                    payload.get('etapa_erradicacao'),
-                    payload.get('etapa_recuperacao'),
-                    payload.get('etapa_comunicacao_bacen'),
-                    payload.get('tempo_estimado_resposta'),
-                    pb_id,
-                    inst_id
-                ))
-                conn.commit()
-                self.send_json({"success": True, "id": pb_id})
-
-            # 4. ATUALIZAR AVALIAÇÃO DE COMPLIANCE
+            # 4. ATUALIZAR AVALIAÇÃO DE COMPLIANCE (Admin Geral, Gestor, Analista - Auditor BLOQUEADO)
             elif path.startswith("/api/avaliacoes/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 req_id = path.split("/")[-1]
                 status = payload.get('status')
                 pct = int(payload.get('percentual_aderencia', 0))
                 justificativa = payload.get('justificativa', '')
                 responsavel = payload.get('responsavel', '')
                 prazo = payload.get('prazo_adequacao')
-                auditor = payload.get('avaliador', 'Auditor GRC')
+                auditor = user['nome']
                 obs = payload.get('observacoes_auditor', '')
 
                 cursor.execute("""
@@ -692,11 +1144,21 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     updated_at = CURRENT_TIMESTAMP;
                 """, (inst_id, req_id, status, pct, justificativa, responsavel, prazo, auditor, obs))
 
+                cursor.execute("""
+                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                VALUES (?, 'ATUALIZAR_AVALIACAO', 'avaliacoes', ?, ?);
+                """, (user['email'], req_id, f"Status atualizado para '{status}' com {pct}% de aderência por {user['nome']} ({role})."))
                 conn.commit()
                 self.send_json({"success": True, "requisito_id": req_id})
+                return
 
-            # 5. ATUALIZAR PLANOS DE AÇÃO 5W2H
+            # 5. ATUALIZAR PLANOS DE AÇÃO 5W2H (Admin Geral, Gestor, Analista)
             elif path.startswith("/api/planos_acao/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 p_id = path.split("/")[-1]
                 cursor.execute("""
                 UPDATE planos_acao
@@ -714,9 +1176,15 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 ))
                 conn.commit()
                 self.send_json({"success": True, "id": p_id})
+                return
 
-            # 6. ATUALIZAR NUVEM
+            # 6. ATUALIZAR NUVEM (Admin Geral, Gestor)
             elif path.startswith("/api/fornecedores_nuvem/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 f_id = path.split("/")[-1]
                 cursor.execute("""
                 UPDATE fornecedores_nuvem
@@ -739,6 +1207,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 ))
                 conn.commit()
                 self.send_json({"success": True, "id": f_id})
+                return
 
             else:
                 self.send_json({"error": "Endpoint não encontrado"}, 404)
@@ -753,11 +1222,41 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         cursor = conn.cursor()
 
         try:
-            inst_id = get_active_institution_id(cursor)
+            token = self.get_token()
+            user = get_authenticated_user(cursor, token)
+            if not user or (user.get('mfa_habilitado') and not user.get('mfa_verificado')):
+                self.send_json({"error": "Não autenticado ou MFA pendente."}, 401)
+                return
 
+            inst_id = get_active_institution_id(cursor, user)
+
+            # 1. EXCLUIR USUÁRIO (Admin Geral ONLY)
+            if path.startswith("/api/usuarios/"):
+                if user.get('is_admin_geral') != 1:
+                    self.send_json({"error": "Apenas o Administrador Geral pode excluir usuários."}, 403)
+                    return
+                del_user_id = int(path.split("/")[-1])
+                if del_user_id == user['id']:
+                    self.send_json({"error": "Você não pode excluir sua própria conta de administrador."}, 400)
+                    return
+                cursor.execute("DELETE FROM usuarios WHERE id = ?;", (del_user_id,))
+                cursor.execute("""
+                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                VALUES (?, 'EXCLUIR_USUARIO', 'usuarios', ?, 'Usuário removido pelo Administrador Geral.');
+                """, (user['email'], del_user_id))
+                conn.commit()
+                self.send_json({"success": True, "deleted_id": del_user_id})
+                return
+
+            # 2. EXCLUIR EVIDÊNCIA (Admin Geral e Gestor - Analista e Auditor BLOQUEADOS)
             if path.startswith("/api/evidencias/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
                 ev_id = path.split("/")[-1]
-                cursor.execute("SELECT caminho_arquivo FROM evidencias WHERE id = ? AND instituicao_id = ?;", (ev_id, inst_id))
+                cursor.execute("SELECT caminho_arquivo, titulo FROM evidencias WHERE id = ? AND instituicao_id = ?;", (ev_id, inst_id))
                 row = cursor.fetchone()
                 if row and row['caminho_arquivo']:
                     disk_path = os.path.join(BASE_DIR, row['caminho_arquivo'].lstrip('/'))
@@ -767,47 +1266,44 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                         except Exception:
                             pass
                 cursor.execute("DELETE FROM evidencias WHERE id = ? AND instituicao_id = ?;", (ev_id, inst_id))
+                cursor.execute("""
+                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
+                VALUES (?, 'EXCLUIR_EVIDENCIA', 'evidencias', ?, ?);
+                """, (user['email'], ev_id, f"Evidência ID {ev_id} removida."))
                 conn.commit()
                 self.send_json({"success": True, "deleted_id": ev_id})
+                return
 
+            # 3. EXCLUIR PLANO DE AÇÃO (Admin Geral e Gestor)
             elif path.startswith("/api/planos_acao/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
                 p_id = path.split("/")[-1]
                 cursor.execute("DELETE FROM planos_acao WHERE id = ? AND instituicao_id = ?;", (p_id, inst_id))
                 conn.commit()
                 self.send_json({"success": True, "deleted_id": p_id})
+                return
 
-            elif path.startswith("/api/pari/playbooks/"):
-                pb_id = path.split("/")[-1]
-                cursor.execute("DELETE FROM pari_playbooks WHERE id = ? AND instituicao_id = ?;", (pb_id, inst_id))
-                conn.commit()
-                self.send_json({"success": True, "deleted_id": pb_id})
-
-            elif path.startswith("/api/pari/simulados/"):
-                sim_id = path.split("/")[-1]
-                cursor.execute("DELETE FROM pari_simulados WHERE id = ? AND instituicao_id = ?;", (sim_id, inst_id))
-                conn.commit()
-                self.send_json({"success": True, "deleted_id": sim_id})
-
+            # 4. EXCLUIR INSTITUIÇÃO (Admin Geral ONLY)
             elif path.startswith("/api/instituicoes/"):
+                if user.get('is_admin_geral') != 1:
+                    self.send_json({"error": "Apenas o Administrador Geral pode excluir instituições."}, 403)
+                    return
+
                 del_id = path.split("/")[-1]
                 cursor.execute("SELECT COUNT(*) as count FROM instituicao;")
                 total = cursor.fetchone()['count']
                 if total <= 1:
                     self.send_json({"error": "Não é possível excluir a única instituição existente."}, 400)
                     return
-                cursor.execute("DELETE FROM avaliacoes WHERE instituicao_id = ?;", (del_id,))
-                cursor.execute("DELETE FROM evidencias WHERE instituicao_id = ?;", (del_id,))
-                cursor.execute("DELETE FROM planos_acao WHERE instituicao_id = ?;", (del_id,))
-                cursor.execute("DELETE FROM fornecedores_nuvem WHERE instituicao_id = ?;", (del_id,))
-                cursor.execute("DELETE FROM pari_playbooks WHERE instituicao_id = ?;", (del_id,))
-                cursor.execute("DELETE FROM pari_simulados WHERE instituicao_id = ?;", (del_id,))
-                cursor.execute("DELETE FROM pari_governanca WHERE instituicao_id = ?;", (del_id,))
-                cursor.execute("DELETE FROM incidentes WHERE instituicao_id = ?;", (del_id,))
+
                 cursor.execute("DELETE FROM instituicao WHERE id = ?;", (del_id,))
-                # Ativar a primeira restante se a ativa foi excluída
                 cursor.execute("UPDATE instituicao SET is_ativa = 1 WHERE id = (SELECT id FROM instituicao LIMIT 1);")
                 conn.commit()
                 self.send_json({"success": True, "deleted_id": del_id})
+                return
 
             else:
                 self.send_json({"error": "Endpoint não encontrado"}, 404)
@@ -1034,6 +1530,7 @@ def run():
     httpd = socketserver.TCPServer(server_address, ComplianceAPIHandler)
     print(f"============================================================")
     print(f"  BACEN CMN 4.893 & 5.274 GRC Compliance System Started")
+    print(f"  RBAC & Least Privilege Engine Active")
     print(f"  Listening on http://localhost:{PORT}")
     print(f"============================================================")
     try:
