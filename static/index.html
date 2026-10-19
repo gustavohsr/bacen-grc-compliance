@@ -1,0 +1,3007 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema GRC | Resoluções BACEN CMN 4.893 e 5.274</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --border-dark: #cbd5e1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+
+      --brand-primary: #0284c7;
+      --brand-primary-dark: #0369a1;
+      --brand-primary-light: #e0f2fe;
+
+      --color-success: #10b981;
+      --color-success-bg: #ecfdf5;
+      --color-success-border: #a7f3d0;
+
+      --color-warning: #f59e0b;
+      --color-warning-bg: #fffbeb;
+      --color-warning-border: #fde68a;
+
+      --color-info: #3b82f6;
+      --color-info-bg: #eff6ff;
+      --color-info-border: #bfdbfe;
+
+      --color-danger: #ef4444;
+      --color-danger-bg: #fef2f2;
+      --color-danger-border: #fecaca;
+
+      --color-neutral: #64748b;
+      --color-neutral-bg: #f1f5f9;
+
+      --sidebar-bg: #0f172a;
+      --sidebar-hover: #1e293b;
+      --sidebar-active: #0284c7;
+      --sidebar-text: #94a3b8;
+      --sidebar-text-active: #ffffff;
+
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Layout */
+    .app-sidebar {
+      width: 280px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      border-right: 1px solid #1e293b;
+      z-index: 20;
+    }
+
+    .app-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+    }
+
+    /* Sidebar Components */
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(2, 132, 199, 0.2);
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .sidebar-title {
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .sidebar-subtitle {
+      color: var(--sidebar-text);
+      font-size: 11.5px;
+      margin-top: 3px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 14px 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .nav-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #475569;
+      padding: 10px 12px 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      color: var(--sidebar-text);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .nav-item:hover {
+      background: var(--sidebar-hover);
+      color: #ffffff;
+    }
+
+    .nav-item.active {
+      background: var(--brand-primary);
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    }
+
+    .nav-item svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+    }
+
+    .badge-counter {
+      margin-left: auto;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .sidebar-footer {
+      padding: 14px 18px;
+      border-top: 1px solid #1e293b;
+      background: #090d16;
+      cursor: pointer;
+    }
+    .sidebar-footer:hover {
+      background: #111827;
+    }
+
+    .director-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .director-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .director-info {
+      overflow: hidden;
+    }
+
+    .director-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f1f5f9;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .director-role {
+      font-size: 10.5px;
+      color: #64748b;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Bar */
+    .app-topbar {
+      height: 64px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .topbar-institution {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .inst-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .inst-segmento {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    .inst-meta {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--brand-primary);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: var(--brand-primary-dark);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text-main);
+      border-color: var(--border-color);
+    }
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: var(--border-dark);
+    }
+
+    .btn-outline-primary {
+      background: transparent;
+      color: var(--brand-primary);
+      border-color: var(--brand-primary);
+    }
+    .btn-outline-primary:hover {
+      background: var(--brand-primary-light);
+    }
+
+    .btn-sm {
+      padding: 5px 9px;
+      font-size: 11.5px;
+    }
+
+    /* Content Area */
+    .content-container {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Section Views */
+    .view-panel {
+      display: none;
+    }
+    .view-panel.active {
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards & Containers */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .kpi-card.kpi-global::before { background: var(--brand-primary); }
+    .kpi-card.kpi-atendido::before { background: var(--color-success); }
+    .kpi-card.kpi-parcial::before { background: var(--color-warning); }
+    .kpi-card.kpi-implementacao::before { background: var(--color-info); }
+    .kpi-card.kpi-nao-atendido::before { background: var(--color-danger); }
+
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 8px 0 2px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .kpi-footer {
+      font-size: 11px;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Banner Especial Resolução CMN 5.274 */
+    .banner-5274 {
+      background: linear-gradient(135deg, #091e3a 0%, #0f3057 100%);
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      padding: 22px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .banner-5274-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .banner-tag {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .banner-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-top: 5px;
+      color: #f8fafc;
+    }
+
+    .banner-desc {
+      font-size: 13px;
+      color: #cbd5e1;
+      max-width: 900px;
+      line-height: 1.5;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 9px;
+      margin-top: 6px;
+    }
+
+    .control-pill {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-sm);
+      padding: 9px 11px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .control-pill:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .control-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .control-name {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.atendido { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .status-dot.parcialmente_atendido { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+    .status-dot.em_implementacao { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+    .status-dot.nao_atendido { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+    /* Tables */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 12.5px;
+    }
+
+    .data-table th {
+      background: #f8fafc;
+      padding: 11px 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    .data-table tr:hover td {
+      background: #fafafa;
+    }
+
+    .req-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 11.5px;
+      color: var(--brand-primary-dark);
+      background: var(--brand-primary-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .req-artigo {
+      font-weight: 700;
+      color: #475569;
+      font-size: 11.5px;
+      white-space: nowrap;
+    }
+
+    .req-title {
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+
+    .req-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-badge.atendido {
+      background: var(--color-success-bg);
+      color: #065f46;
+      border: 1px solid var(--color-success-border);
+    }
+    .status-badge.parcialmente_atendido {
+      background: var(--color-warning-bg);
+      color: #92400e;
+      border: 1px solid var(--color-warning-border);
+    }
+    .status-badge.em_implementacao {
+      background: var(--color-info-bg);
+      color: #1e40af;
+      border: 1px solid var(--color-info-border);
+    }
+    .status-badge.nao_atendido {
+      background: var(--color-danger-bg);
+      color: #991b1b;
+      border: 1px solid var(--color-danger-border);
+    }
+
+    .sev-pill {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .sev-Critica { background: #fee2e2; color: #991b1b; }
+    .sev-Alta { background: #ffedd5; color: #9a3412; }
+    .sev-Media { background: #fef9c3; color: #854d0e; }
+    .sev-Baixa { background: #f1f5f9; color: #475569; }
+
+    /* Filters Bar */
+    .filters-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--brand-primary); }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      color: var(--text-light);
+    }
+
+    .filter-select {
+      padding: 8px 11px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      outline: none;
+      background: #ffffff;
+      cursor: pointer;
+    }
+
+    .filter-toggle-5274 {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      padding: 6px 11px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Modals & Forms */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 820px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: #ffffff;
+      z-index: 2;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .modal-close {
+      background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
+    }
+    .modal-close:hover { background: #f1f5f9; color: var(--text-main); }
+
+    .modal-body {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-footer {
+      padding: 14px 22px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      background: #f8fafc;
+      position: sticky;
+      bottom: 0;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      padding: 8px 11px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-family: inherit;
+      outline: none;
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--brand-primary);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* PARI Module Specific */
+    .pari-tab-bar {
+      display: flex;
+      gap: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .pari-tab {
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+    }
+    .pari-tab:hover { background: #f1f5f9; color: #0f172a; }
+    .pari-tab.active { background: #0284c7; color: #ffffff; }
+
+    .playbook-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .playbook-steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #e2e8f0;
+    }
+
+    .playbook-step {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .playbook-step-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #0284c7;
+    }
+    .playbook-step-desc {
+      font-size: 11.5px;
+      color: #334155;
+      line-height: 1.4;
+    }
+
+    /* Print Styles */
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      .app-sidebar, .app-topbar, .filters-bar, .no-print, button { display: none !important; }
+      .app-main { overflow: visible !important; }
+      .content-container { padding: 0 !important; max-width: 100% !important; }
+      .report-document { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    }
+
+    .report-document {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 36px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .report-header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .report-badge {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 3px 9px;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .report-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .report-meta-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 12.5px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .signature-box {
+      margin-top: 36px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 18px;
+      width: 380px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="app-sidebar">
+    <div class="sidebar-header">
+      <div class="brand-badge">BACEN • CMN 4.893 & 5.274</div>
+      <div class="sidebar-title">Compliance GRC</div>
+      <div class="sidebar-subtitle">Gestão Regulatória do SFN</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Instituição & Escopo</div>
+      <a class="nav-item" onclick="switchView('empresa')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Cadastro da Empresa</span>
+      </a>
+
+      <div class="nav-section-title">Módulos GRC</div>
+      <a class="nav-item active" onclick="switchView('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span>Dashboard Executivo</span>
+      </a>
+      <a class="nav-item" onclick="switchView('matriz')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Matriz de Compliance</span>
+        <span class="badge-counter" id="badge-total-req">32</span>
+      </a>
+      <a class="nav-item" onclick="switchView('controles5274')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>14 Controles (Res. 5.274)</span>
+        <span class="badge-counter" style="background:#0284c7;color:#fff;">14</span>
+      </a>
+      <a class="nav-item" onclick="switchView('pari')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        <span>Plano de Resposta (PARI)</span>
+        <span class="badge-counter" style="background:#f59e0b;color:#fff;">Art. 6º</span>
+      </a>
+      <a class="nav-item" onclick="switchView('evidencias')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>Cofre de Evidências</span>
+        <span class="badge-counter" id="badge-total-evidencias">0</span>
+      </a>
+      <a class="nav-item" onclick="switchView('nuvem')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        <span>Nuvem & Terceiros (Art. 17)</span>
+      </a>
+      <a class="nav-item" onclick="switchView('planos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>Planos de Ação 5W2H</span>
+        <span class="badge-counter" id="badge-total-planos">0</span>
+      </a>
+
+      <div class="nav-section-title">Auditoria & Governança</div>
+      <a class="nav-item" onclick="switchView('relatorio')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+        <span>Relatório Anual (Art. 8º)</span>
+      </a>
+      <a class="nav-item" onclick="switchView('auditoria')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Trilha de Auditoria</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer" onclick="switchView('empresa')">
+      <div class="director-card">
+        <div class="director-avatar" id="avatar-initials">DIR</div>
+        <div class="director-info">
+          <div class="director-name" id="footer-director-name">Diretor Responsável</div>
+          <div class="director-role">Diretor Estatutário BACEN</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main View Area -->
+  <main class="app-main">
+    <!-- Topbar -->
+    <header class="app-topbar">
+      <div class="topbar-left">
+        <div class="topbar-institution">
+          <div class="inst-title">
+            <span id="top-razao-social">Instituição em Avaliação</span>
+            <span class="inst-segmento" id="top-segmento">Segmento S3</span>
+          </div>
+          <div class="inst-meta" id="top-cnpj-versao">CNPJ: 00.000.000/0001-00 • Política v1.0</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" onclick="switchView('empresa')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar Empresa
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="exportData('csv')">Exportar CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportData('json')">Exportar JSON</button>
+        <button class="btn btn-primary btn-sm" onclick="openNewEvidenceModal()">+ Evidência</button>
+      </div>
+    </header>
+
+    <div class="content-container">
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 0: CADASTRO DA EMPRESA A SER AVALIADA -->
+      <!-- ============================================== -->
+      <section id="view-empresa" class="view-panel">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              Cadastro e Configuração da Instituição Financeira Avaliada
+            </div>
+            <div style="display:flex; gap:10px;">
+              <select id="select-instituicao-ativa" class="filter-select" onchange="switchActiveInstitution(this.value)">
+                <!-- populated -->
+              </select>
+              <button class="btn btn-outline-primary btn-sm" onclick="openNewInstitutionModal()">+ Nova Empresa</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px; color:#475569; margin-bottom:16px; line-height:1.5;">
+              Preencha com exatidão os dados da instituição financeira, enquadramento regulatório perante o Banco Central do Brasil e os dados do <strong>Diretor Estatutário formalmente indicado (Art. 7º da Resolução CMN nº 4.893/2021)</strong>. Todas as avaliações, evidências e relatórios oficiais serão parametrizados por este cadastro.
+            </p>
+
+            <form id="form-empresa" onsubmit="saveCompanyData(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Razão Social Completa</label>
+                  <input type="text" id="emp-razao-social" class="form-input" required placeholder="Ex: Banco Exemplo S.A. - Banco Múltiplo">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nome Fantasia</label>
+                  <input type="text" id="emp-nome-fantasia" class="form-input" placeholder="Ex: Exemplo Bank">
+                </div>
+              </div>
+
+              <div class="form-row-3" style="margin-top:12px;">
+                <div class="form-group">
+                  <label class="form-label">CNPJ</label>
+                  <input type="text" id="emp-cnpj" class="form-input" required placeholder="00.000.000/0001-00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Segmento BACEN (Res. CMN 4.553)</label>
+                  <select id="emp-segmento" class="form-select">
+                    <option value="S1">S1 - Porte igual ou superior a 10% do PIB / Sistêmico</option>
+                    <option value="S2">S2 - Porte entre 1% e 10% do PIB</option>
+                    <option value="S3" selected>S3 - Porte entre 0,1% e 1% do PIB</option>
+                    <option value="S4">S4 - Porte inferior a 0,1% do PIB</option>
+                    <option value="S5">S5 - Não aplicável metodologia simplificada / Cooperativas</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tipo de Instituição</label>
+                  <select id="emp-tipo" class="form-select">
+                    <option value="Banco Múltiplo">Banco Múltiplo</option>
+                    <option value="Banco Comercial">Banco Comercial</option>
+                    <option value="Banco de Investimento">Banco de Investimento</option>
+                    <option value="Cooperativa de Crédito">Cooperativa de Crédito</option>
+                    <option value="Sociedade de Crédito Direto (SCD)">Sociedade de Crédito Direto (SCD)</option>
+                    <option value="Instituição de Pagamento (IP)">Instituição de Pagamento (IP)</option>
+                    <option value="Outra Instituição Autorizada">Outra Instituição Autorizada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:16px; margin-top:16px;">
+                <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">
+                  Diretor Estatutário Responsável perante o Banco Central (Art. 7º)
+                </h4>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Nome Completo do Diretor Estatutário</label>
+                    <input type="text" id="emp-diretor" class="form-input" required placeholder="Nome do Diretor Responsável no Unicad">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Cargo / Título Estatutário</label>
+                    <input type="text" id="emp-cargo" class="form-input" required placeholder="Ex: Diretor Executivo de Riscos e Cibersegurança">
+                  </div>
+                </div>
+
+                <div class="form-row-3" style="margin-top:10px;">
+                  <div class="form-group">
+                    <label class="form-label">Código de Registro / Homologação Unicad</label>
+                    <input type="text" id="emp-unicad" class="form-input" placeholder="Ex: UNICAD-12345">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">E-mail Institucional</label>
+                    <input type="email" id="emp-email-diretor" class="form-input" placeholder="diretor@banco.com.br">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Telefone de Contato Direto</label>
+                    <input type="text" id="emp-telefone-diretor" class="form-input" placeholder="(11) 3000-0000">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row-3" style="margin-top:16px;">
+                <div class="form-group">
+                  <label class="form-label">Data de Aprovação da Política pelo Conselho (Art. 9º)</label>
+                  <input type="date" id="emp-data-aprovacao" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Data da Última Revisão Anual (Art. 10)</label>
+                  <input type="date" id="emp-data-revisao" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Versão Atual da Política de Segurança</label>
+                  <input type="text" id="emp-versao-politica" class="form-input" placeholder="Ex: 3.2">
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top:14px;">
+                <label class="form-label">Escopo Operacional e Modelo de Negócio (Art. 2º)</label>
+                <textarea id="emp-escopo" class="form-textarea" rows="2" placeholder="Descreva os principais produtos, canais de atendimento, operações PIX, Open Finance e público-alvo..."></textarea>
+              </div>
+
+              <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:10px;">
+                <button type="submit" class="btn btn-primary">Salvar Dados Cadastrais</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 1: DASHBOARD EXECUTIVO                  -->
+      <!-- ============================================== -->
+      <section id="view-dashboard" class="view-panel active">
+        <!-- Banner Destaque Resolução 5.274 -->
+        <div class="banner-5274">
+          <div class="banner-5274-top">
+            <div>
+              <div class="banner-tag">Marco Regulatório: Resolução CMN nº 5.274/2025</div>
+              <h2 class="banner-title">Os 14 Controles Mínimos Mandatórios e Auditáveis de Cibersegurança</h2>
+              <p class="banner-desc">
+                Publicada em 18/12/2025, alterando diretamente o Art. 3º da Resolução CMN nº 4.893/2021. Transforma recomendações gerais em requisitos técnicos compulsórios com prazo legal de adequação para as instituições financeiras.
+              </p>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;">Aderência aos 14 Controles</div>
+              <div style="font-size: 32px; font-weight: 800; font-family: 'JetBrains Mono', monospace;" id="dash-score-5274">--%</div>
+              <div style="font-size: 11.5px; opacity: 0.9;" id="dash-controles-summary">10 Atendidos • 2 Parciais • 2 Em Impl.</div>
+            </div>
+          </div>
+          <div class="controls-grid" id="dash-pills-5274"></div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-global">
+            <div class="kpi-header">
+              <span>% Aderência Global</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="kpi-value" id="kpi-aderencia-global">--%</div>
+            <div class="kpi-footer">Média ponderada da instituição</div>
+          </div>
+
+          <div class="kpi-card kpi-atendido">
+            <div class="kpi-header">
+              <span>Requisitos Atendidos</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="kpi-value" id="kpi-atendidos" style="color:#065f46;">--</div>
+            <div class="kpi-footer">Com evidências validadas</div>
+          </div>
+
+          <div class="kpi-card kpi-parcial">
+            <div class="kpi-header">
+              <span>Parcialmente Atendido</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="kpi-value" id="kpi-parciais" style="color:#92400e;">--</div>
+            <div class="kpi-footer">Planos de ação em curso</div>
+          </div>
+
+          <div class="kpi-card kpi-implementacao">
+            <div class="kpi-header">
+              <span>Em Implementação</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </div>
+            <div class="kpi-value" id="kpi-implementacao" style="color:#1e40af;">--</div>
+            <div class="kpi-footer">Cronograma ativo</div>
+          </div>
+
+          <div class="kpi-card kpi-nao-atendido">
+            <div class="kpi-header">
+              <span>Não Atendido</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div class="kpi-value" id="kpi-nao-atendidos" style="color:#991b1b;">0</div>
+            <div class="kpi-footer">Gaps críticos regulatórios</div>
+          </div>
+        </div>
+
+        <!-- Duas Colunas -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Maturidade por Domínio Regulatório</div>
+              <button class="btn btn-secondary btn-sm" onclick="switchView('matriz')">Ver Matriz</button>
+            </div>
+            <div class="card-body">
+              <div id="dash-domain-list" style="display:flex; flex-direction:column; gap:14px;"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Prontidão do PARI & Contratação de Nuvem</div>
+              <button class="btn btn-secondary btn-sm" onclick="switchView('pari')">Abrir PARI</button>
+            </div>
+            <div class="card-body" style="display:flex; flex-direction:column; gap:14px;">
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:14px;">
+                <div style="font-weight:700; font-size:13px; color:#0f172a; margin-bottom:4px;">Equipe CSIRT & Plantão 24x7 (Art. 6º)</div>
+                <div style="font-size:12px; color:#475569;" id="dash-pari-contato">Líder do CSIRT em prontidão operacional.</div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <span class="status-badge atendido">CSIRT Ativo</span>
+                  <span class="status-badge atendido">Critérios SISBACEN Definidos</span>
+                </div>
+              </div>
+
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:14px;">
+                <div style="font-weight:700; font-size:13px; color:#0f172a; margin-bottom:4px;">Contratos de Nuvem & Art. 17</div>
+                <div style="font-size:12px; color:#475569;">Provedores relevantes com due diligence e comunicação prévia de 60 dias ao BACEN.</div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <span class="status-badge atendido">Cláusulas Art. 17 Validadas</span>
+                  <span class="status-badge atendido">Convênios Internacionais OK</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 2: PLANO DE RESPOSTA A INCIDENTES (PARI)-->
+      <!-- ============================================== -->
+      <section id="view-pari" class="view-panel">
+        <div class="pari-tab-bar">
+          <div class="pari-tab active" onclick="switchPariTab('governanca')">1. Governança & CSIRT</div>
+          <div class="pari-tab" onclick="switchPariTab('playbooks')">2. Playbooks Operacionais</div>
+          <div class="pari-tab" onclick="switchPariTab('sisbacen')">3. Fluxo e Critérios SISBACEN</div>
+          <div class="pari-tab" onclick="switchPariTab('simulados')">4. Exercícios & Simulados (Tabletop)</div>
+          <div class="pari-tab" onclick="switchPariTab('incidentes_pari')">5. Registro de Incidentes</div>
+        </div>
+
+        <!-- PARI Tab 1: Governança do CSIRT -->
+        <div id="pari-tab-governanca" class="pari-subpanel active">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Estrutura de Resposta a Incidentes (CSIRT) & Linha de Escalonamento</div>
+              <button class="btn btn-primary btn-sm" onclick="savePariGovernance()">Salvar Governança PARI</button>
+            </div>
+            <div class="card-body">
+              <form id="form-pari-gov">
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label class="form-label">Coordenador / Líder do CSIRT</label>
+                    <input type="text" id="pari-lider-csirt" class="form-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">E-mail Oficial do CSIRT</label>
+                    <input type="email" id="pari-email-csirt" class="form-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Telefone / Hot-line de Plantão 24x7</label>
+                    <input type="text" id="pari-telefone-247" class="form-input" required>
+                  </div>
+                </div>
+
+                <div class="form-row" style="margin-top:14px;">
+                  <div class="form-group">
+                    <label class="form-label">Membros Técnicos do CSIRT (Papéis e Atribuições)</label>
+                    <textarea id="pari-membros" class="form-textarea" rows="3"></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Composição do Comitê de Crise Executivo</label>
+                    <textarea id="pari-comite" class="form-textarea" rows="3"></textarea>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-top:14px;">
+                  <label class="form-label">Canais de Comunicação de Emergência Fora da Rede (Out-of-band)</label>
+                  <input type="text" id="pari-canais-emergencia" class="form-input" placeholder="Ex: Sala de guerra virtual isolada, mensageria ponta-a-ponta externa e telefones satelitais">
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- PARI Tab 2: Playbooks Operacionais -->
+        <div id="pari-tab-playbooks" class="pari-subpanel" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="font-size:14px; font-weight:800; color:#0f172a;">Playbooks Formais de Resposta por Tipologia de Ameaça</div>
+            <button class="btn btn-primary btn-sm" onclick="openNewPlaybookModal()">+ Novo Playbook</button>
+          </div>
+          <div id="playbooks-container" style="display:flex; flex-direction:column; gap:16px;"></div>
+        </div>
+
+        <!-- PARI Tab 3: SISBACEN -->
+        <div id="pari-tab-sisbacen" class="pari-subpanel" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Critérios Objetivos de Relevância e Notificação ao Banco Central (Art. 6º, §2º)</div>
+              <button class="btn btn-primary btn-sm" onclick="savePariGovernance()">Atualizar Critérios</button>
+            </div>
+            <div class="card-body" style="display:flex; flex-direction:column; gap:16px;">
+              <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:var(--radius-sm); padding:14px;">
+                <h4 style="font-size:13px; font-weight:800; color:#1e40af; margin-bottom:6px;">
+                  Exigência Regulatória: Artigo 6º, § 2º da Resolução CMN nº 4.893/2021
+                </h4>
+                <p style="font-size:12.5px; color:#1e3a8a; line-height:1.5;">
+                  "A instituição deve comunicar tempestivamente ao Banco Central do Brasil a ocorrência de incidentes cibernéticos relevantes que possam impactar de forma significativa as suas atividades ou que causem grave dano à sua reputação."
+                </p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Critérios Formais da Instituição para Classificar Incidente como "Relevante"</label>
+                <textarea id="pari-criterios-bacen" class="form-textarea" rows="4"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Procedimento Operacional de Notificação no SISBACEN</label>
+                <textarea id="pari-procedimento-sisbacen" class="form-textarea" rows="3"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PARI Tab 4: Simulados e Tabletop Drills -->
+        <div id="pari-tab-simulados" class="pari-subpanel" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="font-size:14px; font-weight:800; color:#0f172a;">Exercícios de Mesa e Simulados Periódicos com a Alta Administração</div>
+            <button class="btn btn-primary btn-sm" onclick="openNewSimulationModal()">+ Registrar Simulado</button>
+          </div>
+          <div id="simulados-container" style="display:flex; flex-direction:column; gap:14px;"></div>
+        </div>
+
+        <!-- PARI Tab 5: Incidentes Reais -->
+        <div id="pari-tab-incidentes_pari" class="pari-subpanel" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="font-size:14px; font-weight:800; color:#0f172a;">Registro Oficial de Incidentes Cibernéticos no Período</div>
+            <button class="btn btn-primary btn-sm" onclick="openNewIncidentModal()">+ Registrar Incidente</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Protocolo</th>
+                  <th>Ocorrência</th>
+                  <th>Categoria</th>
+                  <th>Criticidade</th>
+                  <th>Sistemas Afetados</th>
+                  <th>Impacto & Resposta</th>
+                  <th>SISBACEN</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="pari-incidentes-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 3: MATRIZ DE COMPLIANCE GRC            -->
+      <!-- ============================================== -->
+      <section id="view-matriz" class="view-panel">
+        <div class="filters-bar">
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="filter-search" class="search-input" placeholder="Buscar por código, artigo, palavra-chave..." oninput="loadRequisitos()">
+          </div>
+          <select id="filter-dominio" class="filter-select" onchange="loadRequisitos()">
+            <option value="">Todos os Domínios</option>
+          </select>
+          <select id="filter-status" class="filter-select" onchange="loadRequisitos()">
+            <option value="">Todos os Status</option>
+            <option value="atendido">Atendido</option>
+            <option value="parcialmente_atendido">Parcialmente Atendido</option>
+            <option value="em_implementacao">Em Implementação</option>
+            <option value="nao_atendido">Não Atendido</option>
+            <option value="nao_aplicavel">Não Aplicável</option>
+          </select>
+          <label class="filter-toggle-5274">
+            <input type="checkbox" id="filter-5274-check" onchange="loadRequisitos()">
+            <span>Apenas 14 Controles da Res. 5.274</span>
+          </label>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Artigo</th>
+                <th>Domínio / Requisito</th>
+                <th>Severidade</th>
+                <th>Evidências</th>
+                <th>Status</th>
+                <th>Aderência</th>
+                <th style="text-align:right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="requisitos-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 4: 14 CONTROLES DA RES. CMN 5.274       -->
+      <!-- ============================================== -->
+      <section id="view-controles5274" class="view-panel">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header">
+            <div class="card-title">Dossiê Especial: Os 14 Controles Mínimos da Resolução CMN nº 5.274/2025</div>
+            <span class="banner-tag" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">Prazo: 01 de Março de 2026</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px; color:#475569; line-height:1.5;">
+              A Resolução CMN nº 5.274 acrescentou novos parágrafos ao Art. 3º da Resolução 4.893/2021, fixando 14 controles técnicos mandatórios, detalhados e mensuráveis que toda instituição financeira precisa demonstrar cabalmente em auditoria do Banco Central.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nº</th>
+                <th>Código</th>
+                <th>Controle Técnico Mandatório</th>
+                <th>Status</th>
+                <th>Aderência</th>
+                <th>Responsável</th>
+                <th>Prazo</th>
+                <th style="text-align:right;">Auditar</th>
+              </tr>
+            </thead>
+            <tbody id="table-5274-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 5: COFRE DE EVIDÊNCIAS                  -->
+      <!-- ============================================== -->
+      <section id="view-evidencias" class="view-panel">
+        <div class="card-header" style="background:#fff; border-radius:var(--radius-md); margin-bottom:16px; border:1px solid var(--border-color);">
+          <div class="card-title">Registro Central de Evidências Regulatórias (Evidence Vault)</div>
+          <button class="btn btn-primary btn-sm" onclick="openNewEvidenceModal()">+ Nova Evidência</button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Requisito</th>
+                <th>Título da Evidência</th>
+                <th>Tipo</th>
+                <th>Hash SHA-256 (Integridade)</th>
+                <th>Coletor</th>
+                <th>Data</th>
+                <th>Validação</th>
+                <th style="text-align:right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="evidencias-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 6: NUVEM E FORNECEDORES (ARTS. 11 A 17) -->
+      <!-- ============================================== -->
+      <section id="view-nuvem" class="view-panel">
+        <div class="card-header" style="background:#fff; border-radius:var(--radius-md); margin-bottom:16px; border:1px solid var(--border-color);">
+          <div class="card-title">Gestão de Contratos de Nuvem & Terceiros Relevantes (Arts. 11 a 17)</div>
+          <button class="btn btn-primary btn-sm" onclick="openNewCloudModal()">+ Cadastrar Provedor</button>
+        </div>
+        <div id="nuvem-cards-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:18px;"></div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 7: PLANOS DE AÇÃO 5W2H                  -->
+      <!-- ============================================== -->
+      <section id="view-planos" class="view-panel">
+        <div class="card-header" style="background:#fff; border-radius:var(--radius-md); margin-bottom:16px; border:1px solid var(--border-color);">
+          <div class="card-title">Planos de Ação 5W2H para Remediação de Gaps</div>
+          <button class="btn btn-primary btn-sm" onclick="openNewActionPlanModal()">+ Novo Plano 5W2H</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Requisito</th>
+                <th>Plano de Ação (O quê / Por quê)</th>
+                <th>Quem (Responsável)</th>
+                <th>Quando (Prazo)</th>
+                <th>Como (Ação Prática)</th>
+                <th>Progresso</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="planos-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 8: RELATÓRIO ANUAL (ART. 8º)            -->
+      <!-- ============================================== -->
+      <section id="view-relatorio" class="view-panel">
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:14px;" class="no-print">
+          <button class="btn btn-secondary btn-sm" onclick="window.print()">Imprimir / Salvar PDF</button>
+          <button class="btn btn-primary btn-sm" onclick="exportData('json')">Exportar Dossiê JSON</button>
+        </div>
+
+        <div class="report-document" id="report-printable">
+          <div class="report-header">
+            <div>
+              <div class="report-badge">Documento Regulatório Oficial • BACEN</div>
+              <h1 class="report-title">Relatório Anual sobre a Efetividade da Política de Cibersegurança e do PARI</h1>
+              <div style="font-size:12.5px; color:#64748b; margin-top:3px;">Em cumprimento aos Arts. 8º, 9º e 21 da Resolução CMN nº 4.893/2021 e Resolução CMN nº 5.274/2025</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700; font-size:14px;" id="rep-inst-nome">Instituição Financeira S.A.</div>
+              <div style="font-size:12px; color:#64748b;" id="rep-inst-cnpj">CNPJ: 00.000.000/0001-00</div>
+              <div style="font-size:12px; color:#64748b;" id="rep-data-base">Data-base: 31 de dezembro de 2025</div>
+            </div>
+          </div>
+
+          <div class="report-meta-box">
+            <div>
+              <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700;">Diretor Estatutário Responsável</div>
+              <div style="font-weight:700; font-size:13px; margin-top:2px;" id="rep-diretor">--</div>
+              <div style="font-size:11px; color:#0284c7;" id="rep-unicad">Registro Unicad</div>
+            </div>
+            <div>
+              <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700;">Enquadramento SFN</div>
+              <div style="font-weight:700; font-size:13px; margin-top:2px;" id="rep-segmento">Segmento S3</div>
+              <div style="font-size:11px; color:#64748b;" id="rep-tipo-inst">Banco Múltiplo</div>
+            </div>
+            <div>
+              <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700;">Índice Global de Aderência</div>
+              <div style="font-weight:800; font-size:18px; color:#0284c7; margin-top:2px;" id="rep-score-global">--%</div>
+              <div style="font-size:11px; color:#10b981;">Nível de Maturidade Validado</div>
+            </div>
+          </div>
+
+          <div>
+            <h3 style="font-size:15px; font-weight:800; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">1. Resumo Executivo e Governança</h3>
+            <p style="font-size:12.5px; line-height:1.6; color:#334155;">
+              O presente relatório consolida os resultados da avaliação de efetividade dos controles de segurança cibernética e do Plano de Ação e de Resposta a Incidentes (PARI) do Banco, submetido anualmente à Diretoria Executiva, ao Comitê de Auditoria e ao Conselho de Administração, permanecendo à disposição do Banco Central do Brasil pelo prazo legal mínimo de 5 (cinco) anos, em consonância com os Arts. 8º, 9º, 10 e 21 da Resolução CMN nº 4.893/2021.
+            </p>
+          </div>
+
+          <div>
+            <h3 style="font-size:15px; font-weight:800; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">2. Aferição dos 14 Controles Mínimos da Resolução CMN nº 5.274/2025</h3>
+            <div id="rep-table-5274"></div>
+          </div>
+
+          <div>
+            <h3 style="font-size:15px; font-weight:800; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">3. Declaração e Assinatura do Diretor Estatutário</h3>
+            <p style="font-size:12.5px; line-height:1.6; color:#334155;" id="rep-conclusao-texto">
+              Declaro que os controles implantados cumprem com os requisitos regulamentares vigentes.
+            </p>
+
+            <div class="signature-box">
+              <div class="signature-name" id="rep-sig-name">Nome do Diretor</div>
+              <div class="signature-cargo" id="rep-sig-cargo">Diretor Estatutário perante o BACEN</div>
+              <div style="font-size:11px; color:#64748b; margin-top:2px;">Homologação Unicad Banco Central do Brasil</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- MÓDULO 9: TRILHA DE AUDITORIA                  -->
+      <!-- ============================================== -->
+      <section id="view-auditoria" class="view-panel">
+        <div class="card-header" style="background:#fff; border-radius:var(--radius-md); margin-bottom:16px; border:1px solid var(--border-color);">
+          <div class="card-title">Trilha Imutável de Auditoria do Sistema GRC</div>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data / Hora</th>
+                <th>Usuário</th>
+                <th>Ação</th>
+                <th>Entidade</th>
+                <th>ID</th>
+                <th>Detalhes da Operação</th>
+              </tr>
+            </thead>
+            <tbody id="auditoria-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- MODAL: NOVA INSTITUIÇÃO -->
+  <div class="modal-overlay" id="modal-nova-instituicao">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Cadastrar Nova Instituição Financeira a ser Avaliada</div>
+        <button class="modal-close" onclick="closeModal('modal-nova-instituicao')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Razão Social</label>
+            <input type="text" id="new-razao-social" class="form-input" placeholder="Ex: Cooperativa de Crédito Central Ltda.">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nome Fantasia</label>
+            <input type="text" id="new-nome-fantasia" class="form-input" placeholder="Ex: Sicoop Central">
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">CNPJ</label>
+            <input type="text" id="new-cnpj" class="form-input" placeholder="00.000.000/0001-00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Segmento BACEN</label>
+            <select id="new-segmento" class="form-select">
+              <option value="S1">S1</option>
+              <option value="S2">S2</option>
+              <option value="S3" selected>S3</option>
+              <option value="S4">S4</option>
+              <option value="S5">S5</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo de Instituição</label>
+            <select id="new-tipo" class="form-select">
+              <option value="Banco Múltiplo">Banco Múltiplo</option>
+              <option value="Cooperativa de Crédito">Cooperativa de Crédito</option>
+              <option value="SCD / Fintech">SCD / Fintech</option>
+              <option value="Instituição de Pagamento">Instituição de Pagamento</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Diretor Estatutário Responsável (Art. 7º)</label>
+            <input type="text" id="new-diretor" class="form-input" placeholder="Nome do Diretor">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cargo do Diretor</label>
+            <input type="text" id="new-cargo" class="form-input" value="Diretor de Riscos e Cibersegurança">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-nova-instituicao')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitNewInstitution()">Criar Cadastro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AVALIAÇÃO DE REQUISITO -->
+  <div class="modal-overlay" id="modal-avaliacao">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="modal-req-codigo">REQ-01</div>
+          <div style="font-size:12px; color:#64748b;" id="modal-req-artigo">Art. 2º da Resolução CMN nº 4.893/2021</div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-avaliacao')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div>
+          <h4 style="font-size:13.5px; font-weight:700; color:#0f172a;" id="modal-req-titulo">Título</h4>
+          <p style="font-size:12px; color:#475569; margin-top:3px;" id="modal-req-desc">Descrição legal</p>
+        </div>
+
+        <div style="background:#f1f5f9; padding:10px 12px; border-radius:var(--radius-sm); font-size:11.5px; color:#334155;">
+          <strong>Evidências Sugeridas para Auditoria:</strong>
+          <div id="modal-req-evidencias-sugeridas" style="margin-top:3px;"></div>
+        </div>
+
+        <input type="hidden" id="edit-requisito-id">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Status de Compliance (GRC)</label>
+            <select id="edit-status" class="form-select" onchange="updateSliderFromStatus()">
+              <option value="atendido">Atendido (Compliant)</option>
+              <option value="parcialmente_atendido">Parcialmente Atendido (Partially Compliant)</option>
+              <option value="em_implementacao">Em Implementação (In Progress)</option>
+              <option value="nao_atendido">Não Atendido (Non-Compliant)</option>
+              <option value="nao_aplicavel">Não Aplicável (N/A)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Aderência: <span id="label-pct">100%</span></label>
+            <input type="range" id="edit-pct" min="0" max="100" value="100" class="form-input" oninput="document.getElementById('label-pct').innerText = this.value + '%'">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Responsável Técnico / Área</label>
+            <input type="text" id="edit-responsavel" class="form-input" placeholder="Ex: CISO Office, IAM Lead...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prazo Limite de Adequação</label>
+            <input type="date" id="edit-prazo" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Justificativa Técnica da Instituição</label>
+          <textarea id="edit-justificativa" class="form-textarea" rows="2" placeholder="Descreva os controles operacionais implantados e a comprovação técnica..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Parecer do Auditor / Observações de Compliance</label>
+          <textarea id="edit-obs-auditor" class="form-textarea" rows="2" placeholder="Notas do auditor de cibersegurança..."></textarea>
+        </div>
+
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h5 style="font-size:12.5px; font-weight:700;">Evidências Anexadas a este Requisito</h5>
+            <button class="btn btn-secondary btn-sm" onclick="triggerAddEvidenceFromModal()">+ Vincular Evidência</button>
+          </div>
+          <div id="modal-evidencias-list" style="font-size:11.5px; display:flex; flex-direction:column; gap:5px;"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-avaliacao')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveAssessment()">Salvar Avaliação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR NOVA EVIDÊNCIA -->
+  <div class="modal-overlay" id="modal-evidencia">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Registrar Evidência Regulatória (Evidence Vault)</div>
+        <button class="modal-close" onclick="closeModal('modal-evidencia')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Requisito Vinculado</label>
+          <select id="ev-requisito-id" class="form-select"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Título da Evidência</label>
+          <input type="text" id="ev-titulo" class="form-input" placeholder="Ex: Relatório de Pentest Anual 2025, Log de MFA...">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tipo de Evidência</label>
+            <select id="ev-tipo" class="form-select">
+              <option value="Politica">Documento Normativo / Política</option>
+              <option value="Relatório Pentest">Relatório Técnico de Pentest / Vulnerabilidade</option>
+              <option value="Log/Auditoria">Log de Auditoria / Extração de Configuração</option>
+              <option value="Ata de Diretoria">Ata de Diretoria / Conselho de Administração</option>
+              <option value="Contrato Cloud">Contrato de Nuvem / Aditivo Art. 17</option>
+              <option value="Certificado/Config">Certificado Digital / HSM / Baseline</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Responsável pela Coleta</label>
+            <input type="text" id="ev-coletor" class="form-input" value="Auditor de Cibersegurança">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Descrição dos Fatos e Metodologia</label>
+          <textarea id="ev-desc" class="form-textarea" rows="2" placeholder="Explique como a evidência comprova o atendimento do requisito..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Link Externo / Repositório Seguro (Opcional)</label>
+          <input type="text" id="ev-link" class="form-input" placeholder="https://sharepoint.banco.com.br/evidencias/...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Anexar Arquivo Digital (Geração automática de Hash SHA-256)</label>
+          <input type="file" id="ev-file" class="form-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-evidencia')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitEvidence()">Registrar no Cofre</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO PLAYBOOK DO PARI -->
+  <div class="modal-overlay" id="modal-playbook">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Cadastrar Novo Playbook Operacional de Resposta (PARI)</div>
+        <button class="modal-close" onclick="closeModal('modal-playbook')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Código do Playbook</label>
+            <input type="text" id="pb-codigo" class="form-input" placeholder="Ex: PB-06">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Categoria de Incidente</label>
+            <select id="pb-categoria" class="form-select">
+              <option value="Ransomware">Ransomware</option>
+              <option value="Vazamento de Dados">Vazamento de Dados / LGPD</option>
+              <option value="DDoS">DDoS / Ataque em Canais</option>
+              <option value="Nuvem">Indisponibilidade de Nuvem</option>
+              <option value="RSFN">Conexão RSFN / SPB / PIX</option>
+              <option value="Fraude / Intrusão">Fraude / Intrusão em APIs</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Título do Cenário</label>
+          <input type="text" id="pb-titulo" class="form-input" placeholder="Ex: Comprometimento de Chaves Criptográficas de APIs do PIX">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">1. Detecção & Triagem (Como o incidente é identificado)</label>
+          <textarea id="pb-deteccao" class="form-textarea" rows="2"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">2. Contenção Imediata (Ações imediatas para isolar a ameaça)</label>
+          <textarea id="pb-contencao" class="form-textarea" rows="2"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">3. Erradicação (Eliminação da causa raiz e malwares)</label>
+          <textarea id="pb-erradicacao" class="form-textarea" rows="2"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">4. Recuperação (Restabelecimento seguro dos serviços)</label>
+          <textarea id="pb-recuperacao" class="form-textarea" rows="2"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">5. Comunicação Regulatória ao BACEN</label>
+            <input type="text" id="pb-comunicacao-bacen" class="form-input" placeholder="Critérios para notificar via SISBACEN">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tempo Estimado de Resposta / RTO</label>
+            <input type="text" id="pb-tempo-resposta" class="form-input" placeholder="Ex: Contenção em 15 min; RTO 2h">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-playbook')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitPlaybook()">Salvar Playbook</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO SIMULADO PARI -->
+  <div class="modal-overlay" id="modal-simulado">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Registrar Simulado de Mesa / Exercício de Crise (PARI)</div>
+        <button class="modal-close" onclick="closeModal('modal-simulado')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Título do Exercício Simulado</label>
+            <input type="text" id="sim-titulo" class="form-input" placeholder="Ex: Simulado Anual de Crise Cibernética 2026">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data de Realização</label>
+            <input type="date" id="sim-data" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Cenário de Crise Simulado</label>
+          <textarea id="sim-cenario" class="form-textarea" rows="2" placeholder="Descreva a ameaça fictícia e a situação simulada..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Membros e Áreas Participantes</label>
+          <input type="text" id="sim-participantes" class="form-input" placeholder="Ex: Diretor Estatutário, CISO, Jurídico, CSIRT e Comunicação">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Pontos Fortes Demonstrados</label>
+            <textarea id="sim-fortes" class="form-textarea" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gargalos e Oportunidades de Melhoria</label>
+            <textarea id="sim-gargalos" class="form-textarea" rows="2"></textarea>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ações de Aprimoramento do PARI</label>
+          <input type="text" id="sim-acoes" class="form-input" placeholder="Ajustes nos playbooks e fluxos decorrentes do exercício">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-simulado')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitSimulation()">Registrar Exercício</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let appData = {
+      instituicoes: [],
+      instituicao: null,
+      kpis: null,
+      dominios: [],
+      requisitos: [],
+      evidencias: [],
+      pari: null,
+      fornecedores: [],
+      planos: [],
+      incidentes: []
+    };
+
+    // Navigation Switcher
+    function switchView(viewName) {
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+      const targetView = document.getElementById(`view-${viewName}`);
+      if (targetView) targetView.classList.add('active');
+
+      const items = document.querySelectorAll('.sidebar-nav .nav-item');
+      items.forEach(item => {
+        if (item.getAttribute('onclick')?.includes(viewName)) {
+          item.classList.add('active');
+        }
+      });
+
+      if (viewName === 'relatorio') {
+        loadAnnualReport();
+      } else if (viewName === 'pari') {
+        loadPari();
+      } else if (viewName === 'empresa') {
+        populateCompanyForm();
+      }
+    }
+
+    function switchPariTab(tabName) {
+      document.querySelectorAll('.pari-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.pari-subpanel').forEach(p => p.style.display = 'none');
+
+      const targetSub = document.getElementById(`pari-tab-${tabName}`);
+      if (targetSub) targetSub.style.display = 'block';
+
+      event.target.classList.add('active');
+    }
+
+    // Initialize App
+    async function init() {
+      await loadInstituicoes();
+      await loadDashboard();
+      await loadDominios();
+      await loadRequisitos();
+      await loadEvidencias();
+      await loadPari();
+      await loadNuvem();
+      await loadPlanos();
+      await loadAuditoria();
+    }
+
+    // 0. Instituições
+    async function loadInstituicoes() {
+      try {
+        const res = await fetch('/api/instituicoes');
+        const list = await res.json();
+        appData.instituicoes = list;
+
+        const select = document.getElementById('select-instituicao-ativa');
+        select.innerHTML = '';
+        list.forEach(inst => {
+          const opt = document.createElement('option');
+          opt.value = inst.id;
+          opt.innerText = `${inst.razao_social} (${inst.segmento})`;
+          if (inst.is_ativa) {
+            opt.selected = true;
+            appData.instituicao = inst;
+          }
+        });
+        updateHeaderAndFooterWithCompany();
+      } catch (err) {
+        console.error("Erro ao carregar instituições:", err);
+      }
+    }
+
+    function updateHeaderAndFooterWithCompany() {
+      if (!appData.instituicao) return;
+      const inst = appData.instituicao;
+
+      document.getElementById('top-razao-social').innerText = inst.razao_social;
+      document.getElementById('top-segmento').innerText = `Segmento ${inst.segmento}`;
+      document.getElementById('top-cnpj-versao').innerText = `CNPJ: ${inst.cnpj} • Política v${inst.versao_politica || '1.0'}`;
+      
+      const dirName = inst.diretor_responsavel || 'Diretor Estatutário';
+      document.getElementById('footer-director-name').innerText = dirName;
+
+      // Extract initials
+      const parts = dirName.replace('Dr.', '').replace('Dra.', '').trim().split(' ');
+      const initials = (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+      document.getElementById('avatar-initials').innerText = initials;
+    }
+
+    function populateCompanyForm() {
+      if (!appData.instituicao) return;
+      const inst = appData.instituicao;
+
+      document.getElementById('emp-razao-social').value = inst.razao_social || '';
+      document.getElementById('emp-nome-fantasia').value = inst.nome_fantasia || '';
+      document.getElementById('emp-cnpj').value = inst.cnpj || '';
+      document.getElementById('emp-segmento').value = inst.segmento || 'S3';
+      document.getElementById('emp-tipo').value = inst.tipo_instituicao || 'Banco Múltiplo';
+      document.getElementById('emp-diretor').value = inst.diretor_responsavel || '';
+      document.getElementById('emp-cargo').value = inst.cargo_diretor || '';
+      document.getElementById('emp-unicad').value = inst.registro_unicad || '';
+      document.getElementById('emp-email-diretor').value = inst.email_diretor || '';
+      document.getElementById('emp-telefone-diretor').value = inst.telefone_diretor || '';
+      document.getElementById('emp-data-aprovacao').value = inst.data_aprovacao_politica || '';
+      document.getElementById('emp-data-revisao').value = inst.data_ultima_revisao || '';
+      document.getElementById('emp-versao-politica').value = inst.versao_politica || '1.0';
+      document.getElementById('emp-escopo').value = inst.escopo_operacional || '';
+    }
+
+    async function saveCompanyData(event) {
+      event.preventDefault();
+      const payload = {
+        razao_social: document.getElementById('emp-razao-social').value,
+        nome_fantasia: document.getElementById('emp-nome-fantasia').value,
+        cnpj: document.getElementById('emp-cnpj').value,
+        segmento: document.getElementById('emp-segmento').value,
+        tipo_instituicao: document.getElementById('emp-tipo').value,
+        diretor_responsavel: document.getElementById('emp-diretor').value,
+        cargo_diretor: document.getElementById('emp-cargo').value,
+        registro_unicad: document.getElementById('emp-unicad').value,
+        email_diretor: document.getElementById('emp-email-diretor').value,
+        telefone_diretor: document.getElementById('emp-telefone-diretor').value,
+        data_aprovacao_politica: document.getElementById('emp-data-aprovacao').value,
+        data_ultima_revisao: document.getElementById('emp-data-revisao').value,
+        versao_politica: document.getElementById('emp-versao-politica').value,
+        escopo_operacional: document.getElementById('emp-escopo').value
+      };
+
+      try {
+        const res = await fetch('/api/instituicao', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          alert("Dados da instituição salvos com sucesso!");
+          await loadInstituicoes();
+          await loadDashboard();
+          await loadAuditoria();
+        }
+      } catch (err) {
+        alert("Erro ao salvar dados da instituição.");
+      }
+    }
+
+    function openNewInstitutionModal() {
+      openModal('modal-nova-instituicao');
+    }
+
+    async function submitNewInstitution() {
+      const payload = {
+        razao_social: document.getElementById('new-razao-social').value,
+        nome_fantasia: document.getElementById('new-nome-fantasia').value,
+        cnpj: document.getElementById('new-cnpj').value,
+        segmento: document.getElementById('new-segmento').value,
+        tipo_instituicao: document.getElementById('new-tipo').value,
+        diretor_responsavel: document.getElementById('new-diretor').value,
+        cargo_diretor: document.getElementById('new-cargo').value
+      };
+
+      if (!payload.razao_social) {
+        alert("Informe a Razão Social.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/instituicoes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeModal('modal-nova-instituicao');
+          await loadInstituicoes();
+          await loadDashboard();
+          await loadRequisitos();
+          switchView('empresa');
+        }
+      } catch (err) {
+        alert("Erro ao criar nova instituição.");
+      }
+    }
+
+    async function switchActiveInstitution(id) {
+      try {
+        await fetch(`/api/instituicao/${id}/ativar`, { method: 'POST' });
+        await init();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // 1. Dashboard Metrics
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/dashboard');
+        const data = await res.json();
+        appData.kpis = data.resumo_kpi;
+
+        document.getElementById('kpi-aderencia-global').innerText = `${data.resumo_kpi.percentual_aderencia_global}%`;
+        document.getElementById('kpi-atendidos').innerText = data.resumo_kpi.atendidos;
+        document.getElementById('kpi-parciais').innerText = data.resumo_kpi.parcialmente_atendidos;
+        document.getElementById('kpi-implementacao').innerText = data.resumo_kpi.em_implementacao;
+        document.getElementById('kpi-nao-atendidos').innerText = data.resumo_kpi.nao_atendidos;
+
+        document.getElementById('badge-total-req').innerText = data.resumo_kpi.total_requisitos;
+        document.getElementById('badge-total-evidencias').innerText = data.resumo_kpi.total_evidencias;
+        document.getElementById('badge-total-planos').innerText = data.resumo_kpi.planos_em_aberto;
+
+        document.getElementById('dash-score-5274').innerText = `${data.cmn_5274_stats.aderencia_media}%`;
+        document.getElementById('dash-controles-summary').innerText = 
+          `${data.cmn_5274_stats.atendido} Atendidos • ${data.cmn_5274_stats.parcialmente_atendido} Parciais • ${data.cmn_5274_stats.em_implementacao} Em Impl.`;
+
+        // Render 14 pills
+        const pillsContainer = document.getElementById('dash-pills-5274');
+        pillsContainer.innerHTML = '';
+        data.cmn_5274_controles.forEach(c => {
+          const pill = document.createElement('div');
+          pill.className = 'control-pill';
+          pill.onclick = () => openAssessmentModalByCode(c.codigo);
+          pill.innerHTML = `
+            <div class="control-num">${c.numero_controle_5274}</div>
+            <div class="control-name" title="${c.titulo}">${c.titulo.split(':')[1] || c.titulo}</div>
+            <div class="status-dot ${c.status}"></div>
+          `;
+          pillsContainer.appendChild(pill);
+        });
+
+        // Domínios breakdown
+        const domList = document.getElementById('dash-domain-list');
+        domList.innerHTML = '';
+        data.dominios_stats.forEach(d => {
+          const item = document.createElement('div');
+          item.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+          const score = d.score_medio || 0;
+          let color = '#10b981';
+          if (score < 70) color = '#ef4444';
+          else if (score < 90) color = '#f59e0b';
+
+          item.innerHTML = `
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
+              <span style="font-weight:600; color:#0f172a;">${d.codigo}: ${d.nome}</span>
+              <span style="font-weight:700; font-family:'JetBrains Mono';">${score}%</span>
+            </div>
+            <div style="height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+              <div style="height:100%; width:${score}%; background:${color};"></div>
+            </div>
+          `;
+          domList.appendChild(item);
+        });
+
+      } catch (err) {
+        console.error("Erro ao carregar métricas do dashboard:", err);
+      }
+    }
+
+    // 2. Módulo PARI (Plano de Resposta a Incidentes)
+    async function loadPari() {
+      try {
+        const res = await fetch('/api/pari');
+        const data = await res.json();
+        appData.pari = data;
+
+        if (data.governanca) {
+          const g = data.governanca;
+          document.getElementById('pari-lider-csirt').value = g.lider_csirt || '';
+          document.getElementById('pari-email-csirt').value = g.email_csirt || '';
+          document.getElementById('pari-telefone-247').value = g.telefone_plantao_247 || '';
+          document.getElementById('pari-membros').value = g.membros_csirt || '';
+          document.getElementById('pari-comite').value = g.comite_crise || '';
+          document.getElementById('pari-canais-emergencia').value = g.canais_emergencia || '';
+          document.getElementById('pari-criterios-bacen').value = g.criterios_relevancia_bacen || '';
+          document.getElementById('pari-procedimento-sisbacen').value = g.procedimento_sisbacen || '';
+
+          const contactText = `${g.lider_csirt} • ${g.telefone_plantao_247}`;
+          document.getElementById('dash-pari-contato').innerText = contactText;
+        }
+
+        // Render Playbooks
+        const pbContainer = document.getElementById('playbooks-container');
+        pbContainer.innerHTML = '';
+        data.playbooks.forEach(pb => {
+          const card = document.createElement('div');
+          card.className = 'playbook-card';
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <span class="req-code">${pb.codigo}</span>
+                <span class="domain-badge" style="margin-left:8px;">${pb.categoria}</span>
+                <h3 style="font-size:14.5px; font-weight:800; color:#0f172a; margin-top:4px;">${pb.titulo_cenario}</h3>
+              </div>
+              <span style="font-size:11.5px; font-weight:700; color:#0284c7; background:#e0f2fe; padding:3px 8px; border-radius:4px;">
+                ${pb.tempo_estimado_resposta || 'RTO Definido'}
+              </span>
+            </div>
+
+            <div class="playbook-steps-grid">
+              <div class="playbook-step">
+                <span class="playbook-step-title">1. Detecção & Alerta</span>
+                <span class="playbook-step-desc">${pb.etapa_deteccao}</span>
+              </div>
+              <div class="playbook-step">
+                <span class="playbook-step-title">2. Contenção Imediata</span>
+                <span class="playbook-step-desc">${pb.etapa_contencao}</span>
+              </div>
+              <div class="playbook-step">
+                <span class="playbook-step-title">3. Erradicação</span>
+                <span class="playbook-step-desc">${pb.etapa_erradicacao}</span>
+              </div>
+              <div class="playbook-step">
+                <span class="playbook-step-title">4. Recuperação</span>
+                <span class="playbook-step-desc">${pb.etapa_recuperacao}</span>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:8px;">
+              <div style="font-size:11.5px; color:#475569;">
+                <strong>Comunicação BACEN:</strong> ${pb.etapa_comunicacao_bacen}
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="deletePlaybook(${pb.id})" style="color:#ef4444;">Excluir</button>
+            </div>
+          `;
+          pbContainer.appendChild(card);
+        });
+
+        // Render Simulados
+        const simContainer = document.getElementById('simulados-container');
+        simContainer.innerHTML = '';
+        data.simulados.forEach(s => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <div class="card-header">
+              <div>
+                <span class="req-code">${s.data_realizacao}</span>
+                <span style="font-weight:700; margin-left:8px; font-size:13.5px;">${s.titulo_simulado}</span>
+              </div>
+              <span class="status-badge atendido">Concluído</span>
+            </div>
+            <div class="card-body" style="display:flex; flex-direction:column; gap:10px; font-size:12.5px;">
+              <div><strong>Cenário Testado:</strong> ${s.cenario_testado}</div>
+              <div><strong>Participantes:</strong> ${s.participantes}</div>
+              <div><strong>Tempo de Resposta:</strong> ${s.tempo_resposta_alcancado}</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:10px; border-radius:var(--radius-sm);">
+                <div><span style="color:#065f46; font-weight:700;">Pontos Fortes:</span> ${s.pontos_fortes || '-'}</div>
+                <div><span style="color:#991b1b; font-weight:700;">Gargalos / Lições:</span> ${s.gargalos_identificados || '-'}</div>
+              </div>
+            </div>
+          `;
+          simContainer.appendChild(card);
+        });
+
+        // Render Incidentes PARI
+        const incTbody = document.getElementById('pari-incidentes-tbody');
+        incTbody.innerHTML = '';
+        data.incidentes.forEach(inc => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${inc.protocolo}</strong></td>
+            <td>${inc.data_ocorrencia.replace('T', ' ')}</td>
+            <td><span class="domain-badge">${inc.categoria}</span></td>
+            <td><span class="sev-pill sev-${inc.criticidade}">${inc.criticidade}</span></td>
+            <td>${inc.sistemas_afetados}</td>
+            <td>${inc.impacto_operacional}</td>
+            <td>${inc.notificado_bacen ? '<span class="status-badge atendido">Notificado BACEN</span>' : '<span style="color:#64748b;">Não Relevante BACEN</span>'}</td>
+            <td><span class="status-badge atendido">${inc.status}</span></td>
+          `;
+          incTbody.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error("Erro ao carregar PARI:", err);
+      }
+    }
+
+    async function savePariGovernance() {
+      const payload = {
+        lider_csirt: document.getElementById('pari-lider-csirt').value,
+        email_csirt: document.getElementById('pari-email-csirt').value,
+        telefone_plantao_247: document.getElementById('pari-telefone-247').value,
+        membros_csirt: document.getElementById('pari-membros').value,
+        comite_crise: document.getElementById('pari-comite').value,
+        canais_emergencia: document.getElementById('pari-canais-emergencia').value,
+        criterios_relevancia_bacen: document.getElementById('pari-criterios-bacen').value,
+        procedimento_sisbacen: document.getElementById('pari-procedimento-sisbacen').value,
+        data_ultima_revisao_pari: new Date().toISOString().split('T')[0],
+        versao_pari: '2.5'
+      };
+
+      try {
+        const res = await fetch('/api/pari/governanca', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          alert("Governança e critérios do PARI salvos com sucesso!");
+          await loadPari();
+          await loadDashboard();
+        }
+      } catch (err) {
+        alert("Erro ao salvar governança do PARI.");
+      }
+    }
+
+    function openNewPlaybookModal() {
+      openModal('modal-playbook');
+    }
+
+    async function submitPlaybook() {
+      const payload = {
+        codigo: document.getElementById('pb-codigo').value,
+        categoria: document.getElementById('pb-categoria').value,
+        titulo_cenario: document.getElementById('pb-titulo').value,
+        etapa_deteccao: document.getElementById('pb-deteccao').value,
+        etapa_contencao: document.getElementById('pb-contencao').value,
+        etapa_erradicacao: document.getElementById('pb-erradicacao').value,
+        etapa_recuperacao: document.getElementById('pb-recuperacao').value,
+        etapa_comunicacao_bacen: document.getElementById('pb-comunicacao-bacen').value,
+        tempo_estimado_resposta: document.getElementById('pb-tempo-resposta').value
+      };
+
+      if (!payload.titulo_cenario) {
+        alert("Informe o título do cenário.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/pari/playbooks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeModal('modal-playbook');
+          await loadPari();
+        }
+      } catch (err) {
+        alert("Erro ao cadastrar playbook.");
+      }
+    }
+
+    async function deletePlaybook(id) {
+      if (!confirm("Deseja remover este playbook operacional?")) return;
+      try {
+        await fetch(`/api/pari/playbooks/${id}`, { method: 'DELETE' });
+        await loadPari();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openNewSimulationModal() {
+      openModal('modal-simulado');
+    }
+
+    async function submitSimulation() {
+      const payload = {
+        titulo_simulado: document.getElementById('sim-titulo').value,
+        data_realizacao: document.getElementById('sim-data').value,
+        cenario_testado: document.getElementById('sim-cenario').value,
+        participantes: document.getElementById('sim-participantes').value,
+        pontos_fortes: document.getElementById('sim-fortes').value,
+        gargalos_identificados: document.getElementById('sim-gargalos').value,
+        acoes_melhoria: document.getElementById('sim-acoes').value
+      };
+
+      if (!payload.titulo_simulado) {
+        alert("Informe o título do simulado.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/pari/simulados', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeModal('modal-simulado');
+          await loadPari();
+        }
+      } catch (err) {
+        alert("Erro ao cadastrar simulado.");
+      }
+    }
+
+    // 3. Domínios
+    async function loadDominios() {
+      try {
+        const res = await fetch('/api/dominios');
+        const doms = await res.json();
+        appData.dominios = doms;
+
+        const select = document.getElementById('filter-dominio');
+        select.innerHTML = '<option value="">Todos os Domínios</option>';
+        doms.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.id;
+          opt.innerText = `${d.codigo}: ${d.nome}`;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // 4. Requisitos Normativos
+    async function loadRequisitos() {
+      try {
+        const dominio = document.getElementById('filter-dominio')?.value || '';
+        const status = document.getElementById('filter-status')?.value || '';
+        const search = document.getElementById('filter-search')?.value || '';
+        const is5274 = document.getElementById('filter-5274-check')?.checked ? '1' : '';
+
+        let url = `/api/requisitos?`;
+        if (dominio) url += `dominio_id=${dominio}&`;
+        if (status) url += `status=${status}&`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+        if (is5274) url += `is_cmn_5274=1&`;
+
+        const res = await fetch(url);
+        const reqs = await res.json();
+        appData.requisitos = reqs;
+
+        const tbody = document.getElementById('requisitos-table-body');
+        tbody.innerHTML = '';
+
+        const tbody5274 = document.getElementById('table-5274-body');
+        if (tbody5274) tbody5274.innerHTML = '';
+
+        reqs.forEach(r => {
+          const tr = document.createElement('tr');
+          let statusBadgeClass = r.status || 'nao_atendido';
+          let statusLabel = {
+            'atendido': 'Atendido',
+            'parcialmente_atendido': 'Parcialmente Atendido',
+            'em_implementacao': 'Em Implementação',
+            'nao_atendido': 'Não Atendido',
+            'nao_aplicavel': 'Não Aplicável'
+          }[r.status] || r.status;
+
+          tr.innerHTML = `
+            <td>
+              <span class="req-code">${r.codigo}</span>
+              ${r.is_cmn_5274_obrigatorio ? '<div style="font-size:10px; color:#0284c7; font-weight:700; margin-top:2px;">Res. 5.274</div>' : ''}
+            </td>
+            <td><span class="req-artigo">${r.artigo}</span></td>
+            <td>
+              <div class="req-title">${r.titulo}</div>
+              <div class="req-desc">${r.descricao_legal}</div>
+            </td>
+            <td><span class="sev-pill sev-${r.severidade}">${r.severidade}</span></td>
+            <td><strong>📎 ${r.total_evidencias} ev.</strong></td>
+            <td>
+              <span class="status-badge ${statusBadgeClass}">
+                <span class="status-dot ${statusBadgeClass}"></span>
+                ${statusLabel}
+              </span>
+            </td>
+            <td>
+              <div style="font-family:'JetBrains Mono'; font-weight:700; font-size:12px;">${r.percentual_aderencia}%</div>
+              <div style="height:4px; width:55px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-top:3px;">
+                <div style="height:100%; width:${r.percentual_aderencia}%; background:${r.percentual_aderencia === 100 ? '#10b981' : '#f59e0b'};"></div>
+              </div>
+            </td>
+            <td style="text-align:right;">
+              <button class="btn btn-secondary btn-sm" onclick="openAssessmentModal(${r.id})">Auditar / Editar</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+
+          if (r.is_cmn_5274_obrigatorio && tbody5274) {
+            const tr5 = document.createElement('tr');
+            tr5.innerHTML = `
+              <td><strong>#${r.numero_controle_5274}</strong></td>
+              <td><span class="req-code">${r.codigo}</span></td>
+              <td>
+                <div class="req-title">${r.titulo}</div>
+                <div class="req-desc">${r.especificacao_tecnica}</div>
+              </td>
+              <td>
+                <span class="status-badge ${statusBadgeClass}">
+                  <span class="status-dot ${statusBadgeClass}"></span>
+                  ${statusLabel}
+                </span>
+              </td>
+              <td><strong>${r.percentual_aderencia}%</strong></td>
+              <td>${r.responsavel || '-'}</td>
+              <td>${r.prazo_adequacao || '-'}</td>
+              <td style="text-align:right;">
+                <button class="btn btn-secondary btn-sm" onclick="openAssessmentModal(${r.id})">Auditar</button>
+              </td>
+            `;
+            tbody5274.appendChild(tr5);
+          }
+        });
+
+      } catch (err) {
+        console.error("Erro ao carregar requisitos:", err);
+      }
+    }
+
+    // Modal de Avaliação
+    async function openAssessmentModal(reqId) {
+      try {
+        const res = await fetch(`/api/requisitos/${reqId}`);
+        const r = await res.json();
+
+        document.getElementById('edit-requisito-id').value = r.id;
+        document.getElementById('modal-req-codigo').innerText = r.codigo;
+        document.getElementById('modal-req-artigo').innerText = `${r.artigo} • ${r.dominio_nome}`;
+        document.getElementById('modal-req-titulo').innerText = r.titulo;
+        document.getElementById('modal-req-desc').innerText = r.descricao_legal;
+        document.getElementById('modal-req-evidencias-sugeridas').innerText = r.evidencias_sugeridas;
+
+        document.getElementById('edit-status').value = r.status || 'atendido';
+        document.getElementById('edit-pct').value = r.percentual_aderencia || 100;
+        document.getElementById('label-pct').innerText = `${r.percentual_aderencia || 100}%`;
+        document.getElementById('edit-responsavel').value = r.responsavel || '';
+        document.getElementById('edit-prazo').value = r.prazo_adequacao || '';
+        document.getElementById('edit-justificativa').value = r.justificativa || '';
+        document.getElementById('edit-obs-auditor').value = r.observacoes_auditor || '';
+
+        const evList = document.getElementById('modal-evidencias-list');
+        evList.innerHTML = '';
+        if (r.evidencias && r.evidencias.length > 0) {
+          r.evidencias.forEach(ev => {
+            const row = document.createElement('div');
+            row.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center;';
+            row.innerHTML = `
+              <div>
+                <strong>${ev.titulo}</strong> <span style="color:#64748b; font-size:11px;">(${ev.tipo})</span>
+              </div>
+              <div>
+                ${ev.caminho_arquivo ? `<a href="${ev.caminho_arquivo}" target="_blank" class="btn btn-secondary btn-sm" style="padding:2px 6px;">Baixar</a>` : ''}
+              </div>
+            `;
+            evList.appendChild(row);
+          });
+        } else {
+          evList.innerHTML = '<div style="color:#94a3b8; font-style:italic;">Nenhuma evidência vinculada.</div>';
+        }
+
+        openModal('modal-avaliacao');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openAssessmentModalByCode(code) {
+      const found = appData.requisitos.find(r => r.codigo === code);
+      if (found) openAssessmentModal(found.id);
+    }
+
+    function updateSliderFromStatus() {
+      const status = document.getElementById('edit-status').value;
+      const slider = document.getElementById('edit-pct');
+      if (status === 'atendido') slider.value = 100;
+      else if (status === 'parcialmente_atendido') slider.value = 65;
+      else if (status === 'em_implementacao') slider.value = 40;
+      else if (status === 'nao_atendido') slider.value = 0;
+      document.getElementById('label-pct').innerText = `${slider.value}%`;
+    }
+
+    async function saveAssessment() {
+      const reqId = document.getElementById('edit-requisito-id').value;
+      const payload = {
+        status: document.getElementById('edit-status').value,
+        percentual_aderencia: parseInt(document.getElementById('edit-pct').value),
+        responsavel: document.getElementById('edit-responsavel').value,
+        prazo_adequacao: document.getElementById('edit-prazo').value,
+        justificativa: document.getElementById('edit-justificativa').value,
+        observacoes_auditor: document.getElementById('edit-obs-auditor').value,
+        avaliador: 'Auditor CISO / GRC'
+      };
+
+      try {
+        const res = await fetch(`/api/avaliacoes/${reqId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeModal('modal-avaliacao');
+          await loadDashboard();
+          await loadRequisitos();
+          await loadAuditoria();
+        }
+      } catch (err) {
+        alert("Erro ao salvar avaliação.");
+      }
+    }
+
+    // 5. Evidências
+    async function loadEvidencias() {
+      try {
+        const res = await fetch('/api/evidencias');
+        const evs = await res.json();
+        appData.evidencias = evs;
+
+        const tbody = document.getElementById('evidencias-table-body');
+        tbody.innerHTML = '';
+        evs.forEach(e => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>#${e.id}</td>
+            <td><span class="req-code">${e.requisito_codigo}</span></td>
+            <td>
+              <div style="font-weight:700; color:#0f172a;">${e.titulo}</div>
+              <div style="font-size:11px; color:#64748b;">${e.descricao || '-'}</div>
+            </td>
+            <td><span class="domain-badge">${e.tipo}</span></td>
+            <td>
+              <span style="font-family:'JetBrains Mono'; font-size:10.5px; background:#f1f5f9; padding:2px 6px; border-radius:4px;" title="${e.hash_sha256}">
+                ${e.hash_sha256 ? e.hash_sha256.substring(0, 16) + '...' : '-'}
+              </span>
+            </td>
+            <td>${e.coletor}</td>
+            <td>${e.data_coleta}</td>
+            <td><span class="status-badge atendido">Validada</span></td>
+            <td style="text-align:right;">
+              ${e.caminho_arquivo ? `<a href="${e.caminho_arquivo}" target="_blank" class="btn btn-secondary btn-sm">Baixar</a>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="deleteEvidence(${e.id})" style="color:#ef4444;">Excluir</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openNewEvidenceModal(reqId = null) {
+      const select = document.getElementById('ev-requisito-id');
+      select.innerHTML = '';
+      appData.requisitos.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.innerText = `${r.codigo} - ${r.titulo}`;
+        if (reqId && r.id === reqId) opt.selected = true;
+        select.appendChild(opt);
+      });
+      openModal('modal-evidencia');
+    }
+
+    function triggerAddEvidenceFromModal() {
+      const currentReqId = parseInt(document.getElementById('edit-requisito-id').value);
+      closeModal('modal-avaliacao');
+      openNewEvidenceModal(currentReqId);
+    }
+
+    async function submitEvidence() {
+      const reqId = document.getElementById('ev-requisito-id').value;
+      const titulo = document.getElementById('ev-titulo').value;
+      const tipo = document.getElementById('ev-tipo').value;
+      const coletor = document.getElementById('ev-coletor').value;
+      const desc = document.getElementById('ev-desc').value;
+      const link = document.getElementById('ev-link').value;
+      const fileInput = document.getElementById('ev-file');
+
+      if (!titulo) {
+        alert("Informe o título da evidência.");
+        return;
+      }
+
+      let payload = {
+        requisito_id: reqId,
+        titulo: titulo,
+        tipo: tipo,
+        coletor: coletor,
+        descricao: desc,
+        link_externo: link
+      };
+
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        payload.nome_arquivo = file.name;
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          payload.conteudo_base64 = e.target.result.split(',')[1];
+          await sendEvidencePayload(payload);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        await sendEvidencePayload(payload);
+      }
+    }
+
+    async function sendEvidencePayload(payload) {
+      try {
+        const res = await fetch('/api/evidencias', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeModal('modal-evidencia');
+          await loadDashboard();
+          await loadEvidencias();
+          await loadRequisitos();
+        }
+      } catch (err) {
+        alert("Erro ao enviar evidência.");
+      }
+    }
+
+    async function deleteEvidence(id) {
+      if (!confirm("Remover esta evidência do cofre regulatório?")) return;
+      try {
+        await fetch(`/api/evidencias/${id}`, { method: 'DELETE' });
+        await loadDashboard();
+        await loadEvidencias();
+        await loadRequisitos();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // 6. Nuvem & Terceiros
+    async function loadNuvem() {
+      try {
+        const res = await fetch('/api/fornecedores_nuvem');
+        const lista = await res.json();
+        appData.fornecedores = lista;
+
+        const grid = document.getElementById('nuvem-cards-grid');
+        grid.innerHTML = '';
+        lista.forEach(f => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <div class="card-header">
+              <div class="card-title">${f.nome_provedor}</div>
+              <span class="domain-badge">${f.tipo_nuvem}</span>
+            </div>
+            <div class="card-body" style="display:flex; flex-direction:column; gap:10px;">
+              <div style="font-size:12px; color:#475569;">${f.servico_prestado}</div>
+              <div style="font-size:11.5px;"><strong>Países:</strong> ${f.pais_armazenamento}</div>
+              <div style="font-size:11.5px;"><strong>Notificação BACEN (60d):</strong> ${f.data_notificacao_bacen || '-'}</div>
+
+              <div style="border-top:1px solid #f1f5f9; padding-top:8px; font-size:11px; display:flex; flex-direction:column; gap:4px;">
+                <div style="color:${f.clausula_acesso_bacen ? '#065f46' : '#991b1b'};">
+                  ${f.clausula_acesso_bacen ? '✓ Acesso irrestrito BACEN / Auditores' : '✗ Acesso BACEN pendente'}
+                </div>
+                <div style="color:${f.clausula_segregacao_dados ? '#065f46' : '#991b1b'};">
+                  ${f.clausula_segregacao_dados ? '✓ Segregação Lógica de Dados' : '✗ Segregação pendente'}
+                </div>
+                <div style="color:${f.clausula_continuidade ? '#065f46' : '#991b1b'};">
+                  ${f.clausula_continuidade ? '✓ Plano de Contingência Testado' : '✗ Contingência pendente'}
+                </div>
+                <div style="color:${f.clausula_reversibilidade ? '#065f46' : '#991b1b'};">
+                  ${f.clausula_reversibilidade ? '✓ Reversibilidade e Saída (Art. 20)' : '✗ Plano de saída incompleto'}
+                </div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <span class="status-badge ${f.nivel_risco === 'Baixo' ? 'atendido' : 'parcialmente_atendido'}">Risco ${f.nivel_risco}</span>
+                <span style="font-size:11px; color:#64748b;">Notificado: ${f.notificado_bacen ? 'Sim (Sisbacen)' : 'Não'}</span>
+              </div>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // 7. Planos de Ação 5W2H
+    async function loadPlanos() {
+      try {
+        const res = await fetch('/api/planos_acao');
+        const planos = await res.json();
+        appData.planos = planos;
+
+        const tbody = document.getElementById('planos-table-body');
+        tbody.innerHTML = '';
+        planos.forEach(p => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><span class="req-code">${p.requisito_codigo}</span></td>
+            <td>
+              <div style="font-weight:700; color:#0f172a;">${p.titulo}</div>
+              <div style="font-size:11px; color:#475569;">${p.por_que}</div>
+            </td>
+            <td>${p.quem}</td>
+            <td><strong>${p.quando}</strong></td>
+            <td><div style="font-size:11.5px; color:#334155;">${p.como}</div></td>
+            <td>
+              <div style="font-family:'JetBrains Mono'; font-weight:700;">${p.progresso_pct}%</div>
+              <div style="height:4px; width:65px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-top:2px;">
+                <div style="height:100%; width:${p.progresso_pct}%; background:#3b82f6;"></div>
+              </div>
+            </td>
+            <td><span class="status-badge em_implementacao">${p.status}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // 8. Relatório Anual (Art. 8º)
+    async function loadAnnualReport() {
+      try {
+        const res = await fetch('/api/relatorio_anual');
+        const data = await res.json();
+
+        document.getElementById('rep-inst-nome').innerText = data.instituicao.razao_social;
+        document.getElementById('rep-inst-cnpj').innerText = `CNPJ: ${data.instituicao.cnpj}`;
+        document.getElementById('rep-diretor').innerText = data.instituicao.diretor_responsavel;
+        document.getElementById('rep-unicad').innerText = data.instituicao.registro_unicad ? `Unicad: ${data.instituicao.registro_unicad}` : 'Homologação Unicad BACEN';
+        document.getElementById('rep-segmento').innerText = `Segmento ${data.instituicao.segmento}`;
+        document.getElementById('rep-tipo-inst').innerText = data.instituicao.tipo_instituicao || 'Banco Múltiplo';
+        document.getElementById('rep-score-global').innerText = `${data.kpis.percentual_aderencia_global}%`;
+        document.getElementById('rep-conclusao-texto').innerText = data.conclusao_diretor;
+        document.getElementById('rep-sig-name').innerText = data.instituicao.diretor_responsavel;
+        document.getElementById('rep-sig-cargo').innerText = data.instituicao.cargo_diretor;
+
+        const rep5274 = document.getElementById('rep-table-5274');
+        let html5 = `<table class="data-table" style="margin-top:8px;">
+          <thead>
+            <tr>
+              <th>Artigo / Requisito</th>
+              <th>Controle Técnico Mandatório (Res. 5.274)</th>
+              <th>Status</th>
+              <th>Aderência</th>
+              <th>Justificativa / Parecer</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+        data.requisitos.filter(r => r.is_cmn_5274_obrigatorio).forEach(r => {
+          html5 += `<tr>
+            <td><strong>${r.codigo}</strong><br><span style="font-size:11px;color:#64748b;">${r.artigo}</span></td>
+            <td><div style="font-weight:700;">${r.titulo}</div></td>
+            <td><span class="status-badge ${r.status}">${r.status}</span></td>
+            <td><strong>${r.percentual_aderencia}%</strong></td>
+            <td style="font-size:11.5px; color:#475569;">${r.justificativa || '-'}</td>
+          </tr>`;
+        });
+        html5 += `</tbody></table>`;
+        rep5274.innerHTML = html5;
+
+      } catch (err) {
+        console.error("Erro ao carregar relatório anual:", err);
+      }
+    }
+
+    // 9. Trilha de Auditoria
+    async function loadAuditoria() {
+      try {
+        const res = await fetch('/api/auditoria_log');
+        const logs = await res.json();
+        const tbody = document.getElementById('auditoria-table-body');
+        tbody.innerHTML = '';
+        logs.forEach(l => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="font-family:'JetBrains Mono'; font-size:11px;">${l.data_hora}</td>
+            <td><strong>${l.usuario}</strong></td>
+            <td><span class="domain-badge">${l.acao}</span></td>
+            <td>${l.entidade}</td>
+            <td>#${l.entidade_id || '-'}</td>
+            <td style="font-size:11.5px; color:#475569;">${l.detalhes}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function exportData(type) {
+      window.location.href = `/api/export/${type}`;
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
