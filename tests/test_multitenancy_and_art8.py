@@ -427,5 +427,222 @@ class TestMultiTenancyAndArt8(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(all(l['instituicao_id'] == 2 for l in logs2))
 
+    def test_13_pari_playbooks_crud_and_tenant_isolation(self):
+        """Tests edit (PUT) and delete (DELETE) on PARI playbooks with multi-tenant least privilege."""
+        gestor1_token = self.tokens['gestor1']
+        gestor2_token = self.tokens['gestor2']
+
+        # 1. Gestor 1 creates a playbook on Alpha Bank (inst 1)
+        status, body, _ = self.request('POST', '/api/pari/playbooks', {
+            'codigo': 'PB-TEST-99',
+            'categoria': 'Ransomware',
+            'titulo_cenario': 'Playbook de Teste de Exfiltração de Chaves',
+            'etapa_deteccao': 'Detecção via SIEM / EDR',
+            'etapa_contencao': 'Isolamento de VLAN de servidores',
+            'etapa_erradicacao': 'Revogação de certificados e senhas',
+            'etapa_recuperacao': 'Restauração a partir de backup imutável',
+            'etapa_comunicacao_bacen': 'Notificação SISBACEN imediata',
+            'tempo_estimado_resposta': '30 minutos'
+        }, token=gestor1_token, company_id=1)
+        self.assertIn(status, (200, 201))
+        pb_id = body.get('id')
+        self.assertTrue(pb_id)
+
+        # 2. Gestor 1 updates the playbook (PUT)
+        status, put_resp, _ = self.request('PUT', f'/api/pari/playbooks/{pb_id}', {
+            'codigo': 'PB-TEST-99',
+            'categoria': 'Ransomware',
+            'titulo_cenario': 'Playbook de Teste de Exfiltração de Chaves - ATUALIZADO',
+            'etapa_deteccao': 'Detecção via SIEM e telemetria SOC 24x7',
+            'etapa_contencao': 'Isolamento imediato de endpoint',
+            'etapa_erradicacao': 'Revogação de chaves',
+            'etapa_recuperacao': 'Subida de cluster secundário',
+            'etapa_comunicacao_bacen': 'Notificação via SISBACEN em até 2h',
+            'tempo_estimado_resposta': '15 minutos'
+        }, token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+        self.assertTrue(put_resp.get('success'))
+
+        # Verify update on Alpha Bank
+        status, pari1, _ = self.request('GET', '/api/pari', token=gestor1_token, company_id=1)
+        updated_pb = next((p for p in pari1['playbooks'] if p['id'] == pb_id), None)
+        self.assertIsNotNone(updated_pb)
+        self.assertIn("ATUALIZADO", updated_pb['titulo_cenario'])
+
+        # 3. Gestor 2 (Torra SCD) attempting to update or delete Alpha Bank's playbook is FORBIDDEN (403)
+        status, _, _ = self.request('PUT', f'/api/pari/playbooks/{pb_id}', {
+            'codigo': 'PB-HACK',
+            'titulo_cenario': 'Cross Tenant Tampering'
+        }, token=gestor2_token, company_id=1)
+        self.assertEqual(status, 403)
+
+        status, _, _ = self.request('DELETE', f'/api/pari/playbooks/{pb_id}', token=gestor2_token, company_id=1)
+        self.assertEqual(status, 403)
+
+        # 4. Gestor 1 deletes the playbook (DELETE)
+        status, del_resp, _ = self.request('DELETE', f'/api/pari/playbooks/{pb_id}', token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+        self.assertTrue(del_resp.get('success'))
+
+        # Verify removal
+        status, pari1_after, _ = self.request('GET', '/api/pari', token=gestor1_token, company_id=1)
+        self.assertFalse(any(p['id'] == pb_id for p in pari1_after['playbooks']))
+
+    def test_14_pari_simulados_crud_and_tenant_isolation(self):
+        """Tests edit (PUT) and delete (DELETE) on crisis drills (simulados) with tenant isolation."""
+        gestor1_token = self.tokens['gestor1']
+        gestor2_token = self.tokens['gestor2']
+
+        # 1. Create a crisis drill
+        status, body, _ = self.request('POST', '/api/pari/simulados', {
+            'titulo_simulado': 'Simulado Mesa de Crise Ransomware 2026',
+            'data_realizacao': '2026-03-10',
+            'cenario_testado': 'Criptografia em massa do storage de homologação',
+            'participantes': 'Diretoria, CISO, CSIRT, Jurídico',
+            'tempo_resposta_alcancado': '25 minutos',
+            'pontos_fortes': 'Rapidez no isolamento do storage',
+            'gargalos_identificados': 'Comunicação inicial com stakeholders externos',
+            'acoes_melhoria': 'Atualizar matriz de contatos externos do PARI',
+            'status': 'Concluido'
+        }, token=gestor1_token, company_id=1)
+        self.assertIn(status, (200, 201))
+        sim_id = body.get('id')
+        self.assertTrue(sim_id)
+
+        # 2. Update the drill (PUT)
+        status, put_resp, _ = self.request('PUT', f'/api/pari/simulados/{sim_id}', {
+            'titulo_simulado': 'Simulado Mesa de Crise Ransomware 2026 - REVISADO',
+            'data_realizacao': '2026-03-10',
+            'cenario_testado': 'Criptografia em massa do storage',
+            'participantes': 'Diretoria Executiva, CISO e CSIRT',
+            'tempo_resposta_alcancado': '20 minutos',
+            'pontos_fortes': 'Isolamento exemplar',
+            'gargalos_identificados': 'Nenhum gargalo crítico',
+            'acoes_melhoria': 'Revisão periódica',
+            'status': 'Concluido'
+        }, token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+
+        # 3. Cross-tenant attempt from Gestor 2 -> 403
+        status, _, _ = self.request('DELETE', f'/api/pari/simulados/{sim_id}', token=gestor2_token, company_id=1)
+        self.assertEqual(status, 403)
+
+        # 4. Delete the drill
+        status, del_resp, _ = self.request('DELETE', f'/api/pari/simulados/{sim_id}', token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+
+    def test_15_incidentes_crud_and_status_audit(self):
+        """Tests incident registration, edit with SISBACEN flag and status change to Encerrado with audit log."""
+        gestor1_token = self.tokens['gestor1']
+        admin_token = self.tokens['admin']
+
+        # 1. Register a new incident
+        status, body, _ = self.request('POST', '/api/incidentes', {
+            'protocolo': 'INC-2026-999',
+            'titulo': 'Indisponibilidade momentânea no gateway de pagamentos',
+            'categoria': 'Indisponibilidade de API / Nuvem',
+            'criticidade': 'Alta',
+            'sistemas_afetados': 'API Gateway e Mensageria PIX',
+            'impacto_operacional': 'Lentidão em requisições de pagamentos durante 12 minutos',
+            'status': 'Em Investigação',
+            'notificado_bacen': 0,
+            'tempo_deteccao_minutos': 5,
+            'tempo_resolucao_minutos': 20
+        }, token=gestor1_token, company_id=1)
+        self.assertIn(status, (200, 201))
+        inc_id = body.get('id')
+        self.assertTrue(inc_id)
+
+        # 2. Update incident (status to Encerrado, SISBACEN notified)
+        status, put_resp, _ = self.request('PUT', f'/api/incidentes/{inc_id}', {
+            'titulo': 'Indisponibilidade momentânea no gateway de pagamentos - MITIGADO',
+            'categoria': 'Indisponibilidade de API / Nuvem',
+            'criticidade': 'Alta',
+            'sistemas_afetados': 'API Gateway e Mensageria PIX',
+            'impacto_operacional': 'Restabelecimento completo após chaveamento de contingência',
+            'status': 'Encerrado',
+            'notificado_bacen': 1,
+            'data_notificacao_bacen': '2026-03-15',
+            'causa_raiz': 'Esgotamento de pool de conexões com o banco de dados réplica',
+            'acoes_corretivas': 'Aumento da capacidade do pool e autoscaling configurado',
+            'tempo_deteccao_minutos': 5,
+            'tempo_resolucao_minutos': 18
+        }, token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+
+        # Verify audit trail for this incident
+        status, logs, _ = self.request('GET', '/api/auditoria_log', token=admin_token, company_id=1)
+        self.assertEqual(status, 200)
+        self.assertTrue(any(l['entidade'] == 'incidentes' and l['acao'] == 'ATUALIZAR_INCIDENTE' for l in logs))
+
+        # 3. Delete incident
+        status, del_resp, _ = self.request('DELETE', f'/api/incidentes/{inc_id}', token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+
+    def test_16_fornecedores_nuvem_crud_and_tenant_isolation(self):
+        """Tests cloud provider creation, full update (PUT) and deletion (DELETE) with tenant isolation."""
+        gestor1_token = self.tokens['gestor1']
+        gestor2_token = self.tokens['gestor2']
+
+        # 1. Register cloud provider on Alpha Bank (inst 1)
+        status, body, _ = self.request('POST', '/api/fornecedores_nuvem', {
+            'nome_provedor': 'Google Cloud Platform (GCP)',
+            'servico_prestado': 'Data Lake Corporativo e BigQuery para análise de fraudes',
+            'tipo_nuvem': 'PaaS',
+            'pais_armazenamento': 'Brasil (São Paulo southamerica-east1)',
+            'servico_relevante': 1,
+            'notificado_bacen': 1,
+            'data_notificacao_bacen': '2025-06-10',
+            'convenio_bacen_pais': 1,
+            'clausula_acesso_bacen': 1,
+            'clausula_segregacao_dados': 1,
+            'clausula_continuidade': 1,
+            'clausula_reversibilidade': 1,
+            'data_ultimo_teste_contingencia': '2026-01-20',
+            'nivel_risco': 'Baixo',
+            'observacoes': 'Certificação ISO 27001 e SOC 2 Type II atestadas.'
+        }, token=gestor1_token, company_id=1)
+        self.assertIn(status, (200, 201))
+        f_id = body.get('id')
+        self.assertTrue(f_id)
+
+        # 2. Update cloud provider (PUT)
+        status, put_resp, _ = self.request('PUT', f'/api/fornecedores_nuvem/{f_id}', {
+            'nome_provedor': 'Google Cloud Platform (GCP) Enterprise',
+            'servico_prestado': 'Data Lake Corporativo, BigQuery e Vertex AI para antifraude',
+            'tipo_nuvem': 'PaaS',
+            'pais_armazenamento': 'Brasil (São Paulo) e EUA',
+            'servico_relevante': 1,
+            'notificado_bacen': 1,
+            'data_notificacao_bacen': '2025-06-10',
+            'convenio_bacen_pais': 1,
+            'clausula_acesso_bacen': 1,
+            'clausula_segregacao_dados': 1,
+            'clausula_continuidade': 1,
+            'clausula_reversibilidade': 1,
+            'data_ultimo_teste_contingencia': '2026-02-15',
+            'nivel_risco': 'Baixo',
+            'observacoes': 'Due diligence renovada sem ressalvas.'
+        }, token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+
+        # Verify update on Alpha Bank
+        status, providers1, _ = self.request('GET', '/api/fornecedores_nuvem', token=gestor1_token, company_id=1)
+        updated_f = next((p for p in providers1 if p['id'] == f_id), None)
+        self.assertIsNotNone(updated_f)
+        self.assertIn("Enterprise", updated_f['nome_provedor'])
+
+        # 3. Gestor 2 attempting to delete Alpha Bank provider -> 403
+        status, _, _ = self.request('DELETE', f'/api/fornecedores_nuvem/{f_id}', token=gestor2_token, company_id=1)
+        self.assertEqual(status, 403)
+
+        # 4. Gestor 1 deletes the provider
+        status, del_resp, _ = self.request('DELETE', f'/api/fornecedores_nuvem/{f_id}', token=gestor1_token, company_id=1)
+        self.assertEqual(status, 200)
+
+        # Verify removal
+        status, providers1_after, _ = self.request('GET', '/api/fornecedores_nuvem', token=gestor1_token, company_id=1)
+        self.assertFalse(any(p['id'] == f_id for p in providers1_after))
+
 if __name__ == '__main__':
     unittest.main()

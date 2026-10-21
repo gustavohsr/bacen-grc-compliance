@@ -2158,6 +2158,7 @@
                   <th>Impacto & Resposta</th>
                   <th>SISBACEN</th>
                   <th>Status</th>
+                  <th style="width:170px; text-align:center;">Ações</th>
                 </tr>
               </thead>
               <tbody id="pari-incidentes-tbody"></tbody>
@@ -3059,14 +3060,15 @@
     </div>
   </div>
 
-  <!-- MODAL: NOVO PLAYBOOK DO PARI -->
+  <!-- MODAL: NOVO / EDITAR PLAYBOOK DO PARI -->
   <div class="modal-overlay" id="modal-playbook">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Cadastrar Novo Playbook Operacional de Resposta (PARI)</div>
+        <div class="modal-title" id="modal-playbook-title">Cadastrar Novo Playbook Operacional de Resposta (PARI)</div>
         <button class="modal-close" onclick="closeModal('modal-playbook')">&times;</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="pb-edit-id" value="">
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Código do Playbook</label>
@@ -3128,14 +3130,15 @@
     </div>
   </div>
 
-  <!-- MODAL: NOVO SIMULADO PARI -->
+  <!-- MODAL: NOVO / EDITAR SIMULADO PARI -->
   <div class="modal-overlay" id="modal-simulado">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Registrar Simulado de Mesa / Exercício de Crise (PARI)</div>
+        <div class="modal-title" id="modal-simulado-title">Registrar Simulado de Mesa / Exercício de Crise (PARI)</div>
         <button class="modal-close" onclick="closeModal('modal-simulado')">&times;</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="sim-edit-id" value="">
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Título do Exercício Simulado</label>
@@ -3152,9 +3155,15 @@
           <textarea id="sim-cenario" class="form-textarea" rows="2" placeholder="Descreva a ameaça fictícia e a situação simulada..."></textarea>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Membros e Áreas Participantes</label>
-          <input type="text" id="sim-participantes" class="form-input" placeholder="Ex: Diretor Estatutário, CISO, Jurídico, CSIRT e Comunicação">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Membros e Áreas Participantes</label>
+            <input type="text" id="sim-participantes" class="form-input" placeholder="Ex: Diretor Estatutário, CISO, Jurídico, CSIRT e Comunicação">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tempo de Resposta Alcançado</label>
+            <input type="text" id="sim-tempo-resposta" class="form-input" placeholder="Ex: 35 minutos até contenção">
+          </div>
         </div>
 
         <div class="form-row">
@@ -3168,14 +3177,255 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Ações de Aprimoramento do PARI</label>
-          <input type="text" id="sim-acoes" class="form-input" placeholder="Ajustes nos playbooks e fluxos decorrentes do exercício">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ações de Aprimoramento do PARI</label>
+            <input type="text" id="sim-acoes" class="form-input" placeholder="Ajustes nos playbooks e fluxos decorrentes do exercício">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status do Exercício</label>
+            <select id="sim-status" class="form-select">
+              <option value="Concluido">Concluído</option>
+              <option value="Em Planejamento">Em Planejamento</option>
+              <option value="Em Andamento">Em Andamento</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('modal-simulado')">Cancelar</button>
-        <button class="btn btn-primary" onclick="submitSimulation()">Registrar Exercício</button>
+        <button class="btn btn-primary" onclick="submitSimulation()">Salvar Exercício</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR / EDITAR INCIDENTE CIBERNÉTICO (ART. 6º) -->
+  <div class="modal-overlay" id="modal-incidente">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-incidente-title">Registrar Incidente Cibernético (Art. 6º)</div>
+        <button class="modal-close" onclick="closeModal('modal-incidente')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="inc-edit-id" value="">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Protocolo do Incidente</label>
+            <input type="text" id="inc-protocolo" class="form-input" placeholder="Ex: INC-2026-004">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Categoria do Incidente</label>
+            <select id="inc-categoria" class="form-select">
+              <option value="Ransomware / Malware">Ransomware / Malware</option>
+              <option value="Ataque DDoS / Conectividade">Ataque DDoS / Conectividade</option>
+              <option value="Vazamento de Dados / LGPD">Vazamento de Dados / LGPD</option>
+              <option value="Fraude Eletrônica / PIX">Fraude Eletrônica / PIX</option>
+              <option value="Comprometimento de Credenciais">Comprometimento de Credenciais</option>
+              <option value="Indisponibilidade de API / Nuvem">Indisponibilidade de API / Nuvem</option>
+              <option value="Intrusão / Pentest">Intrusão / Pentest</option>
+              <option value="Outro">Outro Incidente Relevante</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Título / Resumo da Ocorrência</label>
+          <input type="text" id="inc-titulo" class="form-input" placeholder="Ex: Tentativa de bypass de autenticação no gateway SPB">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Data/Hora da Ocorrência</label>
+            <input type="datetime-local" id="inc-data-ocorrencia" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data/Hora da Detecção</label>
+            <input type="datetime-local" id="inc-data-deteccao" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Criticidade / Severidade</label>
+            <select id="inc-criticidade" class="form-select">
+              <option value="Critica">Crítica (Interrupção de Serviços Essenciais / RSFN)</option>
+              <option value="Alta">Alta (Impacto Relevante em Clientes / Dados)</option>
+              <option value="Media">Média (Degradação de Performance / Contenção Ativa)</option>
+              <option value="Baixa">Baixa (Incidente Pontual / Sem Impacto Operacional)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status do Incidente</label>
+            <select id="inc-status" class="form-select">
+              <option value="Em Investigação">Em Investigação</option>
+              <option value="Contido">Contido / Mitigado</option>
+              <option value="Em Remediação">Em Remediação</option>
+              <option value="Encerrado">Encerrado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Sistemas / Serviços Afetados</label>
+          <input type="text" id="inc-sistemas" class="form-input" placeholder="Ex: Core Banking, Mensageria SPB, Barramento PIX">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Impacto Operacional & Resposta Imediata</label>
+          <textarea id="inc-impacto" class="form-textarea" rows="2" placeholder="Descreva os impactos e as ações imediatas executadas pela equipe de resposta..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Notificação Obrigatória SISBACEN (Art. 6º § 1º)</label>
+            <select id="inc-notificado-bacen" class="form-select">
+              <option value="0">Não Relevante para Comunicação Imediata</option>
+              <option value="1">Sim - Comunicado Formalmente via SISBACEN</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data Notificação BACEN (se aplicável)</label>
+            <input type="date" id="inc-data-notificacao" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tempo de Detecção - MTTD (Minutos)</label>
+            <input type="number" id="inc-tempo-deteccao" class="form-input" min="0" placeholder="Ex: 12">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tempo de Resolução - MTTR (Minutos)</label>
+            <input type="number" id="inc-tempo-resolucao" class="form-input" min="0" placeholder="Ex: 95">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Causa Raiz Identificada</label>
+            <textarea id="inc-causa-raiz" class="form-textarea" rows="2" placeholder="Análise pós-incidente da causa raiz..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ações Corretivas / Lições Aprendidas</label>
+            <textarea id="inc-acoes-corretivas" class="form-textarea" rows="2" placeholder="Remediações definitivas e aprimoramento de controles..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-incidente')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitIncident()">Salvar Incidente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CADASTRAR / EDITAR PROVEDOR DE NUVEM & TERCEIROS (ART. 17) -->
+  <div class="modal-overlay" id="modal-nuvem">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-nuvem-title">Cadastrar Provedor de Nuvem & Serviços Relevantes (Art. 17)</div>
+        <button class="modal-close" onclick="closeModal('modal-nuvem')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="nuvem-edit-id" value="">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nome do Prestador de Serviços</label>
+            <input type="text" id="nuvem-nome" class="form-input" placeholder="Ex: Amazon Web Services (AWS)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modelo de Nuvem / Serviço</label>
+            <select id="nuvem-tipo" class="form-select">
+              <option value="IaaS">IaaS (Infraestrutura como Serviço)</option>
+              <option value="PaaS">PaaS (Plataforma como Serviço)</option>
+              <option value="SaaS">SaaS (Software como Serviço)</option>
+              <option value="Nuvem Híbrida">Nuvem Híbrida / Privada</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Serviço Contratado e Escopo Operacional</label>
+          <input type="text" id="nuvem-servico" class="form-input" placeholder="Ex: Hospedagem de infraestrutura core banking, microsserviços e banco de dados">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">País de Armazenamento e Processamento (Art. 17 § 1º)</label>
+            <input type="text" id="nuvem-pais" class="form-input" placeholder="Ex: Brasil (São Paulo) e Estados Unidos (N. Virginia)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Criticidade / Nível de Risco</label>
+            <select id="nuvem-nivel-risco" class="form-select">
+              <option value="Baixo">Baixo (Maturidade Alta / SLAs Estritos)</option>
+              <option value="Medio">Médio (Serviços Acessórios / Redundância)</option>
+              <option value="Alto">Alto (Dependência Crítica / Plano em Andamento)</option>
+              <option value="Critico">Crítico (Sem Redundância Imediata)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Classificação do Serviço</label>
+            <select id="nuvem-relevante" class="form-select">
+              <option value="1">Serviço Relevante para o Negócio (Art. 12)</option>
+              <option value="0">Serviço Secundário / Não Relevante</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Comunicação Prévia ao BACEN (60 dias)</label>
+            <select id="nuvem-notificado-bacen" class="form-select">
+              <option value="1">Sim - Notificado ao BACEN com antecedência</option>
+              <option value="0">Pendente / Não Notificado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Data Notificação SISBACEN</label>
+            <input type="date" id="nuvem-data-notificacao" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data do Último Teste de Contingência</label>
+            <input type="date" id="nuvem-data-teste" class="form-input">
+          </div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:12px; margin-top:6px;">
+          <div style="font-weight:700; font-size:12.5px; color:#0f172a; margin-bottom:8px;">Cláusulas Contratuais Obrigatórias (Art. 17 da Resolução CMN nº 4.893/2021)</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">
+            <label style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="nuvem-clausula-acesso" checked>
+              <span>Acesso Irrestrito do BACEN aos Dados e Contratos</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="nuvem-clausula-segregacao" checked>
+              <span>Segregação Lógica e Física de Dados</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="nuvem-clausula-continuidade" checked>
+              <span>Garantia de Continuidade de Serviços</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="nuvem-clausula-reversibilidade" checked>
+              <span>Estratégia de Saída / Reversibilidade (Art. 20)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="nuvem-convenio-pais" checked>
+              <span>Convênio do BACEN com Autoridade do País</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:12px;">
+          <label class="form-label">Observações, Certificações de Segurança & SLAs</label>
+          <textarea id="nuvem-observacoes" class="form-textarea" rows="2" placeholder="Ex: Certificações ISO/IEC 27001, SOC 2 Type II, PCI-DSS. SLA contratual de notificação de incidentes em até 2 horas."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-nuvem')">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitCloudProvider()">Salvar Provedor</button>
       </div>
     </div>
   </div>
@@ -4279,7 +4529,10 @@
               <div style="font-size:11.5px; color:#475569;">
                 <strong>Comunicação BACEN:</strong> ${pb.etapa_comunicacao_bacen}
               </div>
-              <button class="btn btn-secondary btn-sm" onclick="deletePlaybook(${pb.id})" style="color:#ef4444;">Excluir</button>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" onclick="openEditPlaybookModal(${pb.id})">Editar</button>
+                <button class="btn btn-secondary btn-sm" onclick="deletePlaybook(${pb.id})" style="color:#ef4444;">Excluir</button>
+              </div>
             </div>
           `;
           pbContainer.appendChild(card);
@@ -4297,15 +4550,22 @@
                 <span class="req-code">${s.data_realizacao}</span>
                 <span style="font-weight:700; margin-left:8px; font-size:13.5px;">${s.titulo_simulado}</span>
               </div>
-              <span class="status-badge atendido">Concluído</span>
+              <span class="status-badge ${s.status === 'Concluido' ? 'atendido' : 'em_implementacao'}">${s.status || 'Concluído'}</span>
             </div>
             <div class="card-body" style="display:flex; flex-direction:column; gap:10px; font-size:12.5px;">
               <div><strong>Cenário Testado:</strong> ${s.cenario_testado}</div>
               <div><strong>Participantes:</strong> ${s.participantes}</div>
-              <div><strong>Tempo de Resposta:</strong> ${s.tempo_resposta_alcancado}</div>
+              <div><strong>Tempo de Resposta:</strong> ${s.tempo_resposta_alcancado || '-'}</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:10px; border-radius:var(--radius-sm);">
                 <div><span style="color:#065f46; font-weight:700;">Pontos Fortes:</span> ${s.pontos_fortes || '-'}</div>
                 <div><span style="color:#991b1b; font-weight:700;">Gargalos / Lições:</span> ${s.gargalos_identificados || '-'}</div>
+              </div>
+              <div style="font-size:12px; color:#475569;">
+                <strong>Ações de Aprimoramento:</strong> ${s.acoes_melhoria || '-'}
+              </div>
+              <div style="display:flex; justify-content:flex-end; gap:6px; border-top:1px solid #f1f5f9; padding-top:8px; margin-top:4px;">
+                <button class="btn btn-secondary btn-sm" onclick="openEditSimulationModal(${s.id})">Editar</button>
+                <button class="btn btn-secondary btn-sm" onclick="deleteSimulation(${s.id})" style="color:#ef4444;">Excluir</button>
               </div>
             </div>
           `;
@@ -4317,15 +4577,23 @@
         incTbody.innerHTML = '';
         data.incidentes.forEach(inc => {
           const tr = document.createElement('tr');
+          const dataOcorr = inc.data_ocorrencia ? inc.data_ocorrencia.replace('T', ' ').substring(0, 16) : '-';
           tr.innerHTML = `
             <td><strong>${inc.protocolo}</strong></td>
-            <td>${inc.data_ocorrencia.replace('T', ' ')}</td>
+            <td>${dataOcorr}</td>
             <td><span class="domain-badge">${inc.categoria}</span></td>
             <td><span class="sev-pill sev-${inc.criticidade}">${inc.criticidade}</span></td>
-            <td>${inc.sistemas_afetados}</td>
-            <td>${inc.impacto_operacional}</td>
-            <td>${inc.notificado_bacen ? '<span class="status-badge atendido">Notificado BACEN</span>' : '<span style="color:#64748b;">Não Relevante BACEN</span>'}</td>
-            <td><span class="status-badge atendido">${inc.status}</span></td>
+            <td>${inc.sistemas_afetados || '-'}</td>
+            <td style="max-width:240px; font-size:11.5px;">${inc.impacto_operacional || '-'}</td>
+            <td>${inc.notificado_bacen ? '<span class="status-badge atendido">Notificado BACEN</span>' : '<span style="color:#64748b; font-size:11px;">Não Relevante</span>'}</td>
+            <td><span class="status-badge ${inc.status === 'Encerrado' ? 'atendido' : 'em_implementacao'}">${inc.status}</span></td>
+            <td style="text-align:center;">
+              <div style="display:flex; gap:6px; justify-content:center;">
+                <button class="btn btn-secondary btn-sm" onclick="openEditIncidentModal(${inc.id})" title="Editar Incidente">Editar</button>
+                ${inc.status !== 'Encerrado' ? `<button class="btn btn-secondary btn-sm" onclick="quickCloseIncident(${inc.id})" title="Encerrar Incidente" style="color:#059669;">Encerrar</button>` : ''}
+                <button class="btn btn-secondary btn-sm" onclick="deleteIncident(${inc.id})" title="Excluir Incidente" style="color:#ef4444;">Excluir</button>
+              </div>
+            </td>
           `;
           incTbody.appendChild(tr);
         });
@@ -4356,30 +4624,61 @@
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          alert("Governança e critérios do PARI salvos com sucesso!");
+          showToast("Governança e critérios do PARI salvos com sucesso!", 'success');
           await loadPari();
           await loadDashboard();
+          await loadAuditoria();
         }
       } catch (err) {
-        alert("Erro ao salvar governança do PARI.");
+        showToast("Erro ao salvar governança do PARI.", 'error');
       }
     }
 
+    // --- PLAYBOOKS CRUD ---
     function openNewPlaybookModal() {
+      document.getElementById('pb-edit-id').value = '';
+      document.getElementById('modal-playbook-title').innerText = 'Cadastrar Novo Playbook Operacional de Resposta (PARI)';
+      document.getElementById('pb-codigo').value = `PB-0${(appData.pari?.playbooks?.length || 0) + 1}`;
+      document.getElementById('pb-categoria').value = 'Ransomware';
+      document.getElementById('pb-titulo').value = '';
+      document.getElementById('pb-deteccao').value = '';
+      document.getElementById('pb-contencao').value = '';
+      document.getElementById('pb-erradicacao').value = '';
+      document.getElementById('pb-recuperacao').value = '';
+      document.getElementById('pb-comunicacao-bacen').value = 'Notificar em até 2 horas se afetar canais essenciais';
+      document.getElementById('pb-tempo-resposta').value = 'Contenção em 15 min; RTO 2h';
+      openModal('modal-playbook');
+    }
+
+    function openEditPlaybookModal(id) {
+      const pb = appData.pari?.playbooks?.find(item => item.id === id);
+      if (!pb) return;
+      document.getElementById('pb-edit-id').value = pb.id;
+      document.getElementById('modal-playbook-title').innerText = `Editar Playbook Operacional: ${pb.codigo}`;
+      document.getElementById('pb-codigo').value = pb.codigo || '';
+      document.getElementById('pb-categoria').value = pb.categoria || 'Ransomware';
+      document.getElementById('pb-titulo').value = pb.titulo_cenario || '';
+      document.getElementById('pb-deteccao').value = pb.etapa_deteccao || '';
+      document.getElementById('pb-contencao').value = pb.etapa_contencao || '';
+      document.getElementById('pb-erradicacao').value = pb.etapa_erradicacao || '';
+      document.getElementById('pb-recuperacao').value = pb.etapa_recuperacao || '';
+      document.getElementById('pb-comunicacao-bacen').value = pb.etapa_comunicacao_bacen || '';
+      document.getElementById('pb-tempo-resposta').value = pb.tempo_estimado_resposta || '';
       openModal('modal-playbook');
     }
 
     async function submitPlaybook() {
+      const editId = document.getElementById('pb-edit-id').value;
       const payload = {
-        codigo: document.getElementById('pb-codigo').value,
+        codigo: document.getElementById('pb-codigo').value.trim(),
         categoria: document.getElementById('pb-categoria').value,
-        titulo_cenario: document.getElementById('pb-titulo').value,
-        etapa_deteccao: document.getElementById('pb-deteccao').value,
-        etapa_contencao: document.getElementById('pb-contencao').value,
-        etapa_erradicacao: document.getElementById('pb-erradicacao').value,
-        etapa_recuperacao: document.getElementById('pb-recuperacao').value,
-        etapa_comunicacao_bacen: document.getElementById('pb-comunicacao-bacen').value,
-        tempo_estimado_resposta: document.getElementById('pb-tempo-resposta').value
+        titulo_cenario: document.getElementById('pb-titulo').value.trim(),
+        etapa_deteccao: document.getElementById('pb-deteccao').value.trim(),
+        etapa_contencao: document.getElementById('pb-contencao').value.trim(),
+        etapa_erradicacao: document.getElementById('pb-erradicacao').value.trim(),
+        etapa_recuperacao: document.getElementById('pb-recuperacao').value.trim(),
+        etapa_comunicacao_bacen: document.getElementById('pb-comunicacao-bacen').value.trim(),
+        tempo_estimado_resposta: document.getElementById('pb-tempo-resposta').value.trim()
       };
 
       if (!payload.titulo_cenario) {
@@ -4388,43 +4687,89 @@
       }
 
       try {
-        const res = await fetch('/api/pari/playbooks', {
-          method: 'POST',
+        const url = editId ? `/api/pari/playbooks/${editId}` : '/api/pari/playbooks';
+        const method = editId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
           closeModal('modal-playbook');
+          showToast(editId ? "Playbook atualizado com sucesso!" : "Playbook cadastrado com sucesso!", 'success');
           await loadPari();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao salvar playbook.");
         }
       } catch (err) {
-        alert("Erro ao cadastrar playbook.");
+        showToast("Erro ao salvar playbook.", 'error');
       }
     }
 
     async function deletePlaybook(id) {
-      if (!confirm("Deseja remover este playbook operacional?")) return;
+      if (!confirm("Deseja realmente remover este playbook operacional do PARI?")) return;
       try {
-        await fetch(`/api/pari/playbooks/${id}`, { method: 'DELETE' });
-        await loadPari();
+        const res = await fetch(`/api/pari/playbooks/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast("Playbook removido com sucesso!", 'success');
+          await loadPari();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao remover playbook.");
+        }
       } catch (err) {
-        console.error(err);
+        showToast("Erro de rede ao remover playbook.", 'error');
       }
     }
 
+    // --- SIMULADOS CRUD ---
     function openNewSimulationModal() {
+      document.getElementById('sim-edit-id').value = '';
+      document.getElementById('modal-simulado-title').innerText = 'Registrar Simulado de Mesa / Exercício de Crise (PARI)';
+      document.getElementById('sim-titulo').value = '';
+      document.getElementById('sim-data').value = new Date().toISOString().split('T')[0];
+      document.getElementById('sim-cenario').value = '';
+      document.getElementById('sim-participantes').value = 'Diretor Estatutário, CISO, CSIRT, Jurídico e Comunicação';
+      document.getElementById('sim-tempo-resposta').value = '45 minutos até contenção';
+      document.getElementById('sim-fortes').value = '';
+      document.getElementById('sim-gargalos').value = '';
+      document.getElementById('sim-acoes').value = '';
+      document.getElementById('sim-status').value = 'Concluido';
+      openModal('modal-simulado');
+    }
+
+    function openEditSimulationModal(id) {
+      const s = appData.pari?.simulados?.find(item => item.id === id);
+      if (!s) return;
+      document.getElementById('sim-edit-id').value = s.id;
+      document.getElementById('modal-simulado-title').innerText = `Editar Simulado de Mesa: ${s.titulo_simulado}`;
+      document.getElementById('sim-titulo').value = s.titulo_simulado || '';
+      document.getElementById('sim-data').value = s.data_realizacao || '';
+      document.getElementById('sim-cenario').value = s.cenario_testado || '';
+      document.getElementById('sim-participantes').value = s.participantes || '';
+      document.getElementById('sim-tempo-resposta').value = s.tempo_resposta_alcancado || '';
+      document.getElementById('sim-fortes').value = s.pontos_fortes || '';
+      document.getElementById('sim-gargalos').value = s.gargalos_identificados || '';
+      document.getElementById('sim-acoes').value = s.acoes_melhoria || '';
+      document.getElementById('sim-status').value = s.status || 'Concluido';
       openModal('modal-simulado');
     }
 
     async function submitSimulation() {
+      const editId = document.getElementById('sim-edit-id').value;
       const payload = {
-        titulo_simulado: document.getElementById('sim-titulo').value,
+        titulo_simulado: document.getElementById('sim-titulo').value.trim(),
         data_realizacao: document.getElementById('sim-data').value,
-        cenario_testado: document.getElementById('sim-cenario').value,
-        participantes: document.getElementById('sim-participantes').value,
-        pontos_fortes: document.getElementById('sim-fortes').value,
-        gargalos_identificados: document.getElementById('sim-gargalos').value,
-        acoes_melhoria: document.getElementById('sim-acoes').value
+        cenario_testado: document.getElementById('sim-cenario').value.trim(),
+        participantes: document.getElementById('sim-participantes').value.trim(),
+        tempo_resposta_alcancado: document.getElementById('sim-tempo-resposta').value.trim(),
+        pontos_fortes: document.getElementById('sim-fortes').value.trim(),
+        gargalos_identificados: document.getElementById('sim-gargalos').value.trim(),
+        acoes_melhoria: document.getElementById('sim-acoes').value.trim(),
+        status: document.getElementById('sim-status').value
       };
 
       if (!payload.titulo_simulado) {
@@ -4433,17 +4778,173 @@
       }
 
       try {
-        const res = await fetch('/api/pari/simulados', {
-          method: 'POST',
+        const url = editId ? `/api/pari/simulados/${editId}` : '/api/pari/simulados';
+        const method = editId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
           closeModal('modal-simulado');
+          showToast(editId ? "Simulado atualizado com sucesso!" : "Simulado registrado com sucesso!", 'success');
           await loadPari();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao salvar simulado.");
         }
       } catch (err) {
-        alert("Erro ao cadastrar simulado.");
+        showToast("Erro ao cadastrar simulado.", 'error');
+      }
+    }
+
+    async function deleteSimulation(id) {
+      if (!confirm("Deseja realmente remover este simulado de crise do PARI?")) return;
+      try {
+        const res = await fetch(`/api/pari/simulados/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast("Simulado removido com sucesso!", 'success');
+          await loadPari();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao excluir simulado.");
+        }
+      } catch (err) {
+        showToast("Erro de rede ao excluir simulado.", 'error');
+      }
+    }
+
+    // --- INCIDENTES CRUD ---
+    function openNewIncidentModal() {
+      document.getElementById('inc-edit-id').value = '';
+      document.getElementById('modal-incidente-title').innerText = 'Registrar Incidente Cibernético (Art. 6º)';
+      document.getElementById('inc-protocolo').value = `INC-${new Date().getFullYear()}-${Math.floor(Math.random() * 900 + 100)}`;
+      document.getElementById('inc-categoria').value = 'Ransomware / Malware';
+      document.getElementById('inc-titulo').value = '';
+      const nowStr = new Date().toISOString().substring(0, 16);
+      document.getElementById('inc-data-ocorrencia').value = nowStr;
+      document.getElementById('inc-data-deteccao').value = nowStr;
+      document.getElementById('inc-criticidade').value = 'Media';
+      document.getElementById('inc-status').value = 'Em Investigação';
+      document.getElementById('inc-sistemas').value = '';
+      document.getElementById('inc-impacto').value = '';
+      document.getElementById('inc-notificado-bacen').value = '0';
+      document.getElementById('inc-data-notificacao').value = '';
+      document.getElementById('inc-tempo-deteccao').value = '15';
+      document.getElementById('inc-tempo-resolucao').value = '60';
+      document.getElementById('inc-causa-raiz').value = '';
+      document.getElementById('inc-acoes-corretivas').value = '';
+      openModal('modal-incidente');
+    }
+
+    function openEditIncidentModal(id) {
+      const inc = appData.pari?.incidentes?.find(item => item.id === id);
+      if (!inc) return;
+      document.getElementById('inc-edit-id').value = inc.id;
+      document.getElementById('modal-incidente-title').innerText = `Editar Incidente Cibernético: ${inc.protocolo}`;
+      document.getElementById('inc-protocolo').value = inc.protocolo || '';
+      document.getElementById('inc-categoria').value = inc.categoria || 'Outro';
+      document.getElementById('inc-titulo').value = inc.titulo || '';
+      document.getElementById('inc-data-ocorrencia').value = inc.data_ocorrencia ? inc.data_ocorrencia.substring(0, 16) : '';
+      document.getElementById('inc-data-deteccao').value = inc.data_deteccao ? inc.data_deteccao.substring(0, 16) : '';
+      document.getElementById('inc-criticidade').value = inc.criticidade || 'Media';
+      document.getElementById('inc-status').value = inc.status || 'Em Investigação';
+      document.getElementById('inc-sistemas').value = inc.sistemas_afetados || '';
+      document.getElementById('inc-impacto').value = inc.impacto_operacional || '';
+      document.getElementById('inc-notificado-bacen').value = String(inc.notificado_bacen || 0);
+      document.getElementById('inc-data-notificacao').value = inc.data_notificacao_bacen || '';
+      document.getElementById('inc-tempo-deteccao').value = inc.tempo_deteccao_minutos || 0;
+      document.getElementById('inc-tempo-resolucao').value = inc.tempo_resolucao_minutos || 0;
+      document.getElementById('inc-causa-raiz').value = inc.causa_raiz || '';
+      document.getElementById('inc-acoes-corretivas').value = inc.acoes_corretivas || '';
+      openModal('modal-incidente');
+    }
+
+    async function submitIncident() {
+      const editId = document.getElementById('inc-edit-id').value;
+      const payload = {
+        protocolo: document.getElementById('inc-protocolo').value.trim(),
+        categoria: document.getElementById('inc-categoria').value,
+        titulo: document.getElementById('inc-titulo').value.trim() || document.getElementById('inc-protocolo').value.trim(),
+        data_ocorrencia: document.getElementById('inc-data-ocorrencia').value || new Date().toISOString(),
+        data_deteccao: document.getElementById('inc-data-deteccao').value || new Date().toISOString(),
+        criticidade: document.getElementById('inc-criticidade').value,
+        status: document.getElementById('inc-status').value,
+        sistemas_afetados: document.getElementById('inc-sistemas').value.trim(),
+        impacto_operacional: document.getElementById('inc-impacto').value.trim(),
+        notificado_bacen: parseInt(document.getElementById('inc-notificado-bacen').value) || 0,
+        data_notificacao_bacen: document.getElementById('inc-data-notificacao').value || null,
+        tempo_deteccao_minutos: parseInt(document.getElementById('inc-tempo-deteccao').value) || 0,
+        tempo_resolucao_minutos: parseInt(document.getElementById('inc-tempo-resolucao').value) || 0,
+        causa_raiz: document.getElementById('inc-causa-raiz').value.trim(),
+        acoes_corretivas: document.getElementById('inc-acoes-corretivas').value.trim()
+      };
+
+      try {
+        const url = editId ? `/api/incidentes/${editId}` : '/api/incidentes';
+        const method = editId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeModal('modal-incidente');
+          showToast(editId ? "Incidente atualizado com sucesso!" : "Incidente registrado com sucesso!", 'success');
+          await loadPari();
+          await loadDashboard();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao salvar incidente.");
+        }
+      } catch (err) {
+        showToast("Erro ao salvar incidente.", 'error');
+      }
+    }
+
+    async function quickCloseIncident(id) {
+      if (!confirm("Deseja formalmente encerrar este incidente? O tempo de encerramento será registrado.")) return;
+      try {
+        const res = await fetch(`/api/incidentes/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'Encerrado',
+            data_resolucao: new Date().toISOString().replace('T', ' ').substring(0, 19)
+          })
+        });
+        if (res.ok) {
+          showToast("Incidente encerrado com sucesso!", 'success');
+          await loadPari();
+          await loadDashboard();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Falha ao encerrar incidente.");
+        }
+      } catch (err) {
+        showToast("Erro ao encerrar incidente.", 'error');
+      }
+    }
+
+    async function deleteIncident(id) {
+      if (!confirm("Deseja realmente excluir este registro de incidente? Esta ação será registrada na trilha de auditoria.")) return;
+      try {
+        const res = await fetch(`/api/incidentes/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast("Incidente excluído com sucesso!", 'success');
+          await loadPari();
+          await loadDashboard();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao excluir incidente.");
+        }
+      } catch (err) {
+        showToast("Erro ao excluir incidente.", 'error');
       }
     }
 
@@ -4834,12 +5335,128 @@
                 <span class="status-badge ${f.nivel_risco === 'Baixo' ? 'atendido' : 'parcialmente_atendido'}">Risco ${f.nivel_risco}</span>
                 <span style="font-size:11px; color:#64748b;">Notificado: ${f.notificado_bacen ? 'Sim (Sisbacen)' : 'Não'}</span>
               </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:6px; border-top:1px solid #f1f5f9; padding-top:8px; margin-top:4px;">
+                <button class="btn btn-secondary btn-sm" onclick="openEditCloudModal(${f.id})">Editar</button>
+                <button class="btn btn-secondary btn-sm" onclick="deleteCloudProvider(${f.id})" style="color:#ef4444;">Excluir</button>
+              </div>
             </div>
           `;
           grid.appendChild(card);
         });
       } catch (err) {
         console.error(err);
+      }
+    }
+
+    // --- NUVEM & TERCEIROS (ART. 17) CRUD ---
+    function openNewCloudModal() {
+      document.getElementById('nuvem-edit-id').value = '';
+      document.getElementById('modal-nuvem-title').innerText = 'Cadastrar Provedor de Nuvem & Serviços Relevantes (Art. 17)';
+      document.getElementById('nuvem-nome').value = '';
+      document.getElementById('nuvem-tipo').value = 'IaaS';
+      document.getElementById('nuvem-servico').value = '';
+      document.getElementById('nuvem-pais').value = 'Brasil (São Paulo)';
+      document.getElementById('nuvem-nivel-risco').value = 'Baixo';
+      document.getElementById('nuvem-relevante').value = '1';
+      document.getElementById('nuvem-notificado-bacen').value = '1';
+      document.getElementById('nuvem-data-notificacao').value = new Date().toISOString().split('T')[0];
+      document.getElementById('nuvem-data-teste').value = new Date().toISOString().split('T')[0];
+      document.getElementById('nuvem-clausula-acesso').checked = true;
+      document.getElementById('nuvem-clausula-segregacao').checked = true;
+      document.getElementById('nuvem-clausula-continuidade').checked = true;
+      document.getElementById('nuvem-clausula-reversibilidade').checked = true;
+      document.getElementById('nuvem-convenio-pais').checked = true;
+      document.getElementById('nuvem-observacoes').value = '';
+      openModal('modal-nuvem');
+    }
+
+    function openEditCloudModal(id) {
+      const f = appData.fornecedores?.find(item => item.id === id);
+      if (!f) return;
+      document.getElementById('nuvem-edit-id').value = f.id;
+      document.getElementById('modal-nuvem-title').innerText = `Editar Contrato de Nuvem: ${f.nome_provedor}`;
+      document.getElementById('nuvem-nome').value = f.nome_provedor || '';
+      document.getElementById('nuvem-tipo').value = f.tipo_nuvem || 'IaaS';
+      document.getElementById('nuvem-servico').value = f.servico_prestado || '';
+      document.getElementById('nuvem-pais').value = f.pais_armazenamento || '';
+      document.getElementById('nuvem-nivel-risco').value = f.nivel_risco || 'Baixo';
+      document.getElementById('nuvem-relevante').value = String(f.servico_relevante ?? 1);
+      document.getElementById('nuvem-notificado-bacen').value = String(f.notificado_bacen ?? 1);
+      document.getElementById('nuvem-data-notificacao').value = f.data_notificacao_bacen || '';
+      document.getElementById('nuvem-data-teste').value = f.data_ultimo_teste_contingencia || '';
+      document.getElementById('nuvem-clausula-acesso').checked = Boolean(f.clausula_acesso_bacen);
+      document.getElementById('nuvem-clausula-segregacao').checked = Boolean(f.clausula_segregacao_dados);
+      document.getElementById('nuvem-clausula-continuidade').checked = Boolean(f.clausula_continuidade);
+      document.getElementById('nuvem-clausula-reversibilidade').checked = Boolean(f.clausula_reversibilidade);
+      document.getElementById('nuvem-convenio-pais').checked = Boolean(f.convenio_bacen_pais);
+      document.getElementById('nuvem-observacoes').value = f.observacoes || '';
+      openModal('modal-nuvem');
+    }
+
+    async function submitCloudProvider() {
+      const editId = document.getElementById('nuvem-edit-id').value;
+      const payload = {
+        nome_provedor: document.getElementById('nuvem-nome').value.trim(),
+        tipo_nuvem: document.getElementById('nuvem-tipo').value,
+        servico_prestado: document.getElementById('nuvem-servico').value.trim(),
+        pais_armazenamento: document.getElementById('nuvem-pais').value.trim(),
+        nivel_risco: document.getElementById('nuvem-nivel-risco').value,
+        servico_relevante: parseInt(document.getElementById('nuvem-relevante').value) || 0,
+        notificado_bacen: parseInt(document.getElementById('nuvem-notificado-bacen').value) || 0,
+        data_notificacao_bacen: document.getElementById('nuvem-data-notificacao').value || null,
+        data_ultimo_teste_contingencia: document.getElementById('nuvem-data-teste').value || null,
+        clausula_acesso_bacen: document.getElementById('nuvem-clausula-acesso').checked ? 1 : 0,
+        clausula_segregacao_dados: document.getElementById('nuvem-clausula-segregacao').checked ? 1 : 0,
+        clausula_continuidade: document.getElementById('nuvem-clausula-continuidade').checked ? 1 : 0,
+        clausula_reversibilidade: document.getElementById('nuvem-clausula-reversibilidade').checked ? 1 : 0,
+        convenio_bacen_pais: document.getElementById('nuvem-convenio-pais').checked ? 1 : 0,
+        observacoes: document.getElementById('nuvem-observacoes').value.trim()
+      };
+
+      if (!payload.nome_provedor) {
+        alert("Informe o nome do prestador de serviços em nuvem.");
+        return;
+      }
+
+      try {
+        const url = editId ? `/api/fornecedores_nuvem/${editId}` : '/api/fornecedores_nuvem';
+        const method = editId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeModal('modal-nuvem');
+          showToast(editId ? "Contrato de nuvem atualizado com sucesso!" : "Provedor de nuvem cadastrado com sucesso!", 'success');
+          await loadNuvem();
+          await loadDashboard();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao salvar provedor de nuvem.");
+        }
+      } catch (err) {
+        showToast("Erro ao salvar provedor de nuvem.", 'error');
+      }
+    }
+
+    async function deleteCloudProvider(id) {
+      if (!confirm("Deseja realmente excluir este prestador de serviços em nuvem?\n\nAtenção: Esta exclusão pode impactar diretamente os indicadores de conformidade com o Art. 17 da Resolução CMN 4.893 e o Relatório Anual.")) return;
+      try {
+        const res = await fetch(`/api/fornecedores_nuvem/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast("Provedor de nuvem excluído com sucesso!", 'success');
+          await loadNuvem();
+          await loadDashboard();
+          await loadAuditoria();
+        } else {
+          const err = await res.json();
+          alert(err.error || "Erro ao excluir provedor de nuvem.");
+        }
+      } catch (err) {
+        showToast("Erro de rede ao excluir provedor de nuvem.", 'error');
       }
     }
 

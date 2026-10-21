@@ -1386,34 +1386,167 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"success": True, "id": p_id})
                 return
 
-            # 6. ATUALIZAR NUVEM (Admin Geral, Gestor)
-            elif path.startswith("/api/fornecedores_nuvem/"):
-                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+            # 6. ATUALIZAR PLAYBOOK PARI (Admin Geral, Gestor, Analista)
+            elif path.startswith("/api/pari/playbooks/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
                 if not ok:
                     self.send_json({"error": err}, code)
                     return
 
-                f_id = path.split("/")[-1]
+                pb_id = int(path.split("/")[-1])
                 cursor.execute("""
-                UPDATE fornecedores_nuvem
-                SET notificado_bacen = ?, convenio_bacen_pais = ?, clausula_acesso_bacen = ?,
-                    clausula_segregacao_dados = ?, clausula_continuidade = ?, clausula_reversibilidade = ?,
-                    data_ultimo_teste_contingencia = ?, nivel_risco = ?, observacoes = ?
+                UPDATE pari_playbooks
+                SET codigo = ?, categoria = ?, titulo_cenario = ?, etapa_deteccao = ?,
+                    etapa_contencao = ?, etapa_erradicacao = ?, etapa_recuperacao = ?,
+                    etapa_comunicacao_bacen = ?, tempo_estimado_resposta = ?
                 WHERE id = ? AND instituicao_id = ?;
                 """, (
+                    payload.get('codigo'),
+                    payload.get('categoria', 'Geral'),
+                    payload.get('titulo_cenario'),
+                    payload.get('etapa_deteccao'),
+                    payload.get('etapa_contencao'),
+                    payload.get('etapa_erradicacao'),
+                    payload.get('etapa_recuperacao'),
+                    payload.get('etapa_comunicacao_bacen'),
+                    payload.get('tempo_estimado_resposta'),
+                    pb_id,
+                    inst_id
+                ))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_PLAYBOOK', 'pari_playbooks', pb_id, f"Playbook '{payload.get('codigo')}' atualizado.")
+                conn.commit()
+                self.send_json({"success": True, "id": pb_id})
+                return
+
+            # 7. ATUALIZAR SIMULADO PARI (Admin Geral, Gestor, Analista)
+            elif path.startswith("/api/pari/simulados/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
+                sim_id = int(path.split("/")[-1])
+                cursor.execute("""
+                UPDATE pari_simulados
+                SET titulo_simulado = ?, data_realizacao = ?, cenario_testado = ?,
+                    participantes = ?, tempo_resposta_alcancado = ?, pontos_fortes = ?,
+                    gargalos_identificados = ?, acoes_melhoria = ?, status = ?
+                WHERE id = ? AND instituicao_id = ?;
+                """, (
+                    payload.get('titulo_simulado'),
+                    payload.get('data_realizacao'),
+                    payload.get('cenario_testado'),
+                    payload.get('participantes'),
+                    payload.get('tempo_resposta_alcancado'),
+                    payload.get('pontos_fortes'),
+                    payload.get('gargalos_identificados'),
+                    payload.get('acoes_melhoria'),
+                    payload.get('status', 'Concluido'),
+                    sim_id,
+                    inst_id
+                ))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_SIMULADO', 'pari_simulados', sim_id, f"Simulado '{payload.get('titulo_simulado')}' atualizado.")
+                conn.commit()
+                self.send_json({"success": True, "id": sim_id})
+                return
+
+            # 8. ATUALIZAR INCIDENTE (Admin Geral, Gestor, Analista)
+            elif path.startswith("/api/incidentes/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
+                inc_id = int(path.split("/")[-1])
+                status = payload.get('status', 'Em Investigação')
+                data_resolucao = payload.get('data_resolucao')
+                if status == 'Encerrado' and not data_resolucao:
+                    data_resolucao = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                cursor.execute("""
+                UPDATE incidentes
+                SET titulo = COALESCE(?, titulo),
+                    categoria = COALESCE(?, categoria),
+                    criticidade = ?,
+                    sistemas_afetados = ?,
+                    impacto_operacional = ?,
+                    status = ?,
+                    notificado_bacen = ?,
+                    data_notificacao_bacen = ?,
+                    causa_raiz = ?,
+                    acoes_corretivas = ?,
+                    tempo_deteccao_minutos = ?,
+                    tempo_resolucao_minutos = ?,
+                    data_resolucao = ?
+                WHERE id = ? AND instituicao_id = ?;
+                """, (
+                    payload.get('titulo'),
+                    payload.get('categoria'),
+                    payload.get('criticidade'),
+                    payload.get('sistemas_afetados'),
+                    payload.get('impacto_operacional'),
+                    status,
+                    int(payload.get('notificado_bacen', 0)),
+                    payload.get('data_notificacao_bacen'),
+                    payload.get('causa_raiz'),
+                    payload.get('acoes_corretivas'),
+                    int(payload.get('tempo_deteccao_minutos', 0)),
+                    int(payload.get('tempo_resolucao_minutos', 0)),
+                    data_resolucao,
+                    inc_id,
+                    inst_id
+                ))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_INCIDENTE', 'incidentes', inc_id, f"Incidente ID {inc_id} atualizado: status '{status}', criticidade '{payload.get('criticidade')}'.")
+                conn.commit()
+                self.send_json({"success": True, "id": inc_id})
+                return
+
+            # 9. ATUALIZAR NUVEM (Admin Geral, Gestor)
+            elif path.startswith("/api/fornecedores_nuvem/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
+                f_id = int(path.split("/")[-1])
+                cursor.execute("""
+                UPDATE fornecedores_nuvem
+                SET nome_provedor = COALESCE(?, nome_provedor),
+                    servico_prestado = COALESCE(?, servico_prestado),
+                    tipo_nuvem = COALESCE(?, tipo_nuvem),
+                    pais_armazenamento = COALESCE(?, pais_armazenamento),
+                    servico_relevante = ?,
+                    notificado_bacen = ?,
+                    data_notificacao_bacen = ?,
+                    convenio_bacen_pais = ?,
+                    clausula_acesso_bacen = ?,
+                    clausula_segregacao_dados = ?,
+                    clausula_continuidade = ?,
+                    clausula_reversibilidade = ?,
+                    data_ultimo_teste_contingencia = ?,
+                    nivel_risco = ?,
+                    observacoes = ?
+                WHERE id = ? AND instituicao_id = ?;
+                """, (
+                    payload.get('nome_provedor'),
+                    payload.get('servico_prestado'),
+                    payload.get('tipo_nuvem'),
+                    payload.get('pais_armazenamento'),
+                    int(payload.get('servico_relevante', 1)),
                     int(payload.get('notificado_bacen', 1)),
+                    payload.get('data_notificacao_bacen'),
                     int(payload.get('convenio_bacen_pais', 1)),
                     int(payload.get('clausula_acesso_bacen', 1)),
                     int(payload.get('clausula_segregacao_dados', 1)),
                     int(payload.get('clausula_continuidade', 1)),
                     int(payload.get('clausula_reversibilidade', 1)),
                     payload.get('data_ultimo_teste_contingencia'),
-                    payload.get('nivel_risco'),
-                    payload.get('observacoes'),
+                    payload.get('nivel_risco', 'Baixo'),
+                    payload.get('observacoes', ''),
                     f_id,
                     inst_id
                 ))
-                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_FORNECEDOR_NUVEM', 'fornecedores_nuvem', f_id, f"Provedor ID {f_id} atualizado.")
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_FORNECEDOR_NUVEM', 'fornecedores_nuvem', f_id, f"Provedor {payload.get('nome_provedor', f_id)} atualizado.")
                 conn.commit()
                 self.send_json({"success": True, "id": f_id})
                 return
@@ -1529,7 +1662,59 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"success": True, "deleted_id": f_id})
                 return
 
-            # 5. EXCLUIR INSTITUIÇÃO (Admin Geral ONLY)
+            # 5. EXCLUIR PLAYBOOK PARI (Admin Geral e Gestor)
+            elif path.startswith("/api/pari/playbooks/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                pb_id = int(path.split("/")[-1])
+                cursor.execute("DELETE FROM pari_playbooks WHERE id = ? AND instituicao_id = ?;", (pb_id, inst_id))
+                log_audit(cursor, inst_id, user['email'], 'EXCLUIR_PLAYBOOK', 'pari_playbooks', pb_id, f"Playbook ID {pb_id} excluído.")
+                conn.commit()
+                self.send_json({"success": True, "deleted_id": pb_id})
+                return
+
+            # 6. EXCLUIR SIMULADO PARI (Admin Geral e Gestor)
+            elif path.startswith("/api/pari/simulados/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                sim_id = int(path.split("/")[-1])
+                cursor.execute("DELETE FROM pari_simulados WHERE id = ? AND instituicao_id = ?;", (sim_id, inst_id))
+                log_audit(cursor, inst_id, user['email'], 'EXCLUIR_SIMULADO', 'pari_simulados', sim_id, f"Simulado ID {sim_id} excluído.")
+                conn.commit()
+                self.send_json({"success": True, "deleted_id": sim_id})
+                return
+
+            # 7. EXCLUIR INCIDENTE (Admin Geral e Gestor)
+            elif path.startswith("/api/incidentes/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                inc_id = int(path.split("/")[-1])
+                cursor.execute("DELETE FROM incidentes WHERE id = ? AND instituicao_id = ?;", (inc_id, inst_id))
+                log_audit(cursor, inst_id, user['email'], 'EXCLUIR_INCIDENTE', 'incidentes', inc_id, f"Incidente ID {inc_id} excluído.")
+                conn.commit()
+                self.send_json({"success": True, "deleted_id": inc_id})
+                return
+
+            # 8. EXCLUIR FORNECEDOR NUVEM (Admin Geral e Gestor)
+            elif path.startswith("/api/fornecedores_nuvem/"):
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                f_id = int(path.split("/")[-1])
+                cursor.execute("DELETE FROM fornecedores_nuvem WHERE id = ? AND instituicao_id = ?;", (f_id, inst_id))
+                log_audit(cursor, inst_id, user['email'], 'EXCLUIR_FORNECEDOR_NUVEM', 'fornecedores_nuvem', f_id, f"Fornecedor Nuvem ID {f_id} excluído.")
+                conn.commit()
+                self.send_json({"success": True, "deleted_id": f_id})
+                return
+
+            # 9. EXCLUIR INSTITUIÇÃO (Admin Geral ONLY)
             elif path.startswith("/api/instituicoes/"):
                 if user.get('is_admin_geral') != 1:
                     self.send_json({"error": "Apenas o Administrador Geral pode excluir instituições."}, 403)
