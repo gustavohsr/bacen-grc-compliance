@@ -1,9 +1,11 @@
 """
 Seed data script for BACEN CMN 4.893 and CMN 5.274 GRC Compliance System.
-Configurable institutional data and complete PARI module data.
+Full multi-tenant seeding for Institution 1 (Alpha Bank - S3) and Institution 2 (Torra SCD - S4).
+Includes complete PARI module, 14 controls of Res. 5.274, Pentest fragilidades, and Art. 8 annual report records.
 """
 import sqlite3
 import os
+import hashlib
 from datetime import datetime, date
 
 DB_PATH = "/home/gustavo/.gemini/antigravity/scratch/bacen-grc-compliance/data/compliance.db"
@@ -18,6 +20,8 @@ def seed():
     cursor.execute("DELETE FROM usuario_instituicoes;")
     cursor.execute("DELETE FROM usuarios;")
     cursor.execute("DELETE FROM auditoria_log;")
+    cursor.execute("DELETE FROM auditorias_fragilidades;")
+    cursor.execute("DELETE FROM relatorio_anual_parecer;")
     cursor.execute("DELETE FROM incidentes;")
     cursor.execute("DELETE FROM pari_simulados;")
     cursor.execute("DELETE FROM pari_playbooks;")
@@ -34,44 +38,51 @@ def seed():
     from auth import hash_password, generate_mfa_secret
 
     salt_admin, hash_admin = hash_password("Admin@Bacen2026!")
-    salt_gestor, hash_gestor = hash_password("Gestor@2026!")
+    salt_gestor1, hash_gestor1 = hash_password("Gestor@2026!")
     salt_analista, hash_analista = hash_password("Analista@2026!")
     salt_auditor, hash_auditor = hash_password("Auditor@2026!")
+    salt_gestor2, hash_gestor2 = hash_password("Gestor@Torra2026!")
 
-    # Secrets fixos de fácil visualização inicial (mas válidos RFC 6238)
     mfa_admin = "JBSWY3DPEHPK3PXP"
-    mfa_gestor = "JBSWY3DPEHPK3PXQ"
+    mfa_gestor1 = "JBSWY3DPEHPK3PXQ"
     mfa_analista = "JBSWY3DPEHPK3PXR"
     mfa_auditor = "JBSWY3DPEHPK3PXS"
+    mfa_gestor2 = "JBSWY3DPEHPK3PXT"
 
     cursor.execute("""
     INSERT INTO usuarios (id, nome, email, senha_hash, senha_salt, is_admin_geral, mfa_habilitado, mfa_secret, ativo, cargo)
     VALUES
-    (1, 'Administrador Geral GRC', 'admin@bacen.local', ?, ?, 1, 1, ?, 1, 'Administrador da Plataforma'),
+    (1, 'Administrador Geral GRC', 'admin@bacen.local', ?, ?, 1, 1, ?, 1, 'Administrador da Plataforma GRC'),
     (2, 'Roberto Silveira Mello', 'gestor@alphabank.com.br', ?, ?, 0, 1, ?, 1, 'Diretor Executivo de Riscos / CISO'),
     (3, 'Felipe Albuquerque', 'analista@alphabank.com.br', ?, ?, 0, 1, ?, 1, 'Analista Sênior de Cibersegurança'),
-    (4, 'Dr. Marcelo Nogueira', 'auditor@bacen.gov.br', ?, ?, 0, 1, ?, 1, 'Auditor Fiscal do Banco Central');
+    (4, 'Dr. Marcelo Nogueira', 'auditor@bacen.gov.br', ?, ?, 0, 1, ?, 1, 'Auditor Fiscal do Banco Central'),
+    (5, 'Camila Ramos', 'gestor@torrascd.com.br', ?, ?, 0, 1, ?, 1, 'Gerente Executiva de Riscos & Compliance');
     """, (hash_admin, salt_admin, mfa_admin,
-          hash_gestor, salt_gestor, mfa_gestor,
+          hash_gestor1, salt_gestor1, mfa_gestor1,
           hash_analista, salt_analista, mfa_analista,
-          hash_auditor, salt_auditor, mfa_auditor))
+          hash_auditor, salt_auditor, mfa_auditor,
+          hash_gestor2, salt_gestor2, mfa_gestor2))
 
-    # Vínculos com a Instituição 1
+    # Vínculos com as Instituições (Least Privilege Multi-Tenant)
     cursor.execute("""
     INSERT INTO usuario_instituicoes (usuario_id, instituicao_id, perfil)
     VALUES
-    (2, 1, 'gestor'),
-    (3, 1, 'analista'),
-    (4, 1, 'auditor');
+    (2, 1, 'gestor'),    -- Roberto é gestor no Alpha Bank
+    (3, 1, 'analista'),  -- Felipe é analista no Alpha Bank
+    (3, 2, 'analista'),  -- Felipe também tem perfil analista na Torra SCD
+    (4, 1, 'auditor'),   -- Dr. Marcelo (BACEN) é auditor no Alpha Bank
+    (4, 2, 'auditor'),   -- Dr. Marcelo (BACEN) é auditor na Torra SCD
+    (5, 2, 'gestor');    -- Camila é gestora na Torra SCD
     """)
 
-    # 1. Instituição Financeira Avaliada (Configurável)
+    # 1. Instituições Financeiras Avaliadas
     cursor.execute("""
     INSERT INTO instituicao (
         id, razao_social, nome_fantasia, cnpj, segmento, tipo_instituicao, registro_unicad,
         diretor_responsavel, cargo_diretor, email_diretor, telefone_diretor,
         data_aprovacao_politica, data_ultima_revisao, versao_politica, escopo_operacional, is_ativa
-    ) VALUES (
+    ) VALUES 
+    (
         1,
         'Instituição Financeira Alpha S.A. - Banco Múltiplo',
         'Alpha Bank',
@@ -88,6 +99,24 @@ def seed():
         '3.2',
         'Instituição autorizada a funcionar pelo Banco Central do Brasil no segmento S3, operando contas de pagamento, crédito comercial, mensageria SPB, PIX e Open Finance.',
         1
+    ),
+    (
+        2,
+        'Torra Sociedade de Crédito Direto S.A.',
+        'Torra SCD',
+        '12.345.678/0001-90',
+        'S4',
+        'Sociedade de Crédito Direto (SCD)',
+        'BACEN-UNICAD-4512',
+        'Sílvio Cavalcanti',
+        'Diretor de Cibersegurança e Operações (Art. 7º BACEN)',
+        'silvio.cavalcanti@torrascd.com.br',
+        '(11) 4004-9988',
+        '2025-10-10',
+        '2026-01-20',
+        '2.1',
+        'Instituição autorizada pelo BACEN no segmento S4 especializada em microcrédito digital, antecipação de recebíveis e liquidação via arranjo PIX.',
+        0
     );
     """)
 
@@ -98,73 +127,71 @@ def seed():
         ('DOM-03', 'Gestão, Resposta a Incidentes (PARI) & Compartilhamento', 'Plano de Ação e de Resposta a Incidentes, contenção, mitigação e comunicação ao Banco Central.', 'Arts. 4º, 5º, 6º e 8º', 'alert-triangle', 3),
         ('DOM-04', 'Testes de Intrusão, Pentests & Gestão de Vulnerabilidades', 'Rotinas periódicas de varreduras técnicas, testes de intrusão independentes e remediação.', 'Arts. 3º, 6º e 8º', 'target', 4),
         ('DOM-05', 'Contratação de Nuvem, Processamento & Notificação BACEN', 'Requisitos para contratação de serviços relevantes de TI/Nuvem no Brasil e exterior e cláusulas do Art. 17.', 'Arts. 11 a 17', 'cloud', 5),
-        ('DOM-06', 'Continuidade de Negócios, Contingência & Reversibilidade', 'Planos de contingência, resiliência operacional, testes de desastre e planos de saída (exit strategy).', 'Arts. 18 a 20', 'activity', 6),
-        ('DOM-07', 'Relatório Anual do PARI, Trilha de Auditoria & Fiscalização', 'Elaboração do relatório anual com data-base 31/12, submissão à governança e guarda de evidências.', 'Arts. 8º, 21 e 22', 'file-text', 7)
+        ('DOM-06', 'Continuidade de Negócios & Reversibilidade', 'Planos de contingência, continuidade operacional de serviços críticos e estratégia de saída de nuvem.', 'Arts. 18, 19 e 20', 'refresh-cw', 6),
+        ('DOM-07', 'Relatório Anual do Diretor Responsável & Guarda de Documentos', 'Elaboração do relatório anual com data-base em 31/12, submissão ao Conselho e custódia por 5 anos.', 'Arts. 8º e 21', 'file-text', 7)
     ]
 
-    for d in dominios:
+    for dom in dominios:
         cursor.execute("""
         INSERT INTO dominios (codigo, nome, descricao, artigo_referencia, icone, ordem)
         VALUES (?, ?, ?, ?, ?, ?);
-        """, d)
-
-    conn.commit()
+        """, dom)
 
     cursor.execute("SELECT id, codigo FROM dominios;")
     dom_map = {row['codigo']: row['id'] for row in cursor.fetchall()}
 
-    # 3. Requisitos Normativos (Todos os 32 requisitos)
+    # 3. 32 Requisitos Regulatórios (Resoluções CMN 4.893 e 5.274)
     requisitos = [
         # DOM-01: Governança & Política
         (
-            'REQ-01', dom_map['DOM-01'], 'Art. 2º',
-            'Implementação e Manutenção da Política de Segurança Cibernética',
-            'A instituição deve implementar e manter política de segurança cibernética compatível com o modelo de negócio, natureza, complexidade dos produtos e relevância de risco.',
-            'A Política deve abranger formalmente objetivos, procedimentos de controle, tratamento de incidentes, retenção de dados, testes de continuidade e critérios de classificação da informação.',
+            'REQ-01', dom_map['DOM-01'], 'Arts. 1º e 2º',
+            'Implementação e Formalização da Política de Segurança Cibernética',
+            'As instituições financeiras devem implementar e manter política de segurança cibernética com princípios e diretrizes para garantir a confidencialidade, integridade e disponibilidade.',
+            'Documento aprovado pelo Conselho de Administração contemplando objetivos de segurança, autenticação, criptografia, prevenção e salvaguardas contra vazamentos.',
             0, None, 'Critica', 'Todos',
-            'Documento formal da Política de Segurança Cibernética; Matriz de Classificação de Informação; Resoluções de Diretoria.'
+            'Política de Segurança Cibernética assinada; Ata de aprovação pelo Conselho de Administração; Registro de divulgação aos colaboradores.'
         ),
         (
             'REQ-02', dom_map['DOM-01'], 'Art. 7º',
-            'Designação Formal de Diretor Estatutário Responsável perante o BACEN',
-            'A instituição deve designar diretor responsável pela política de segurança cibernética e pela execução do plano de ação e de resposta a incidentes.',
-            'O diretor estatutário deve estar formalmente homologado no sistema Unicad do Banco Central do Brasil, possuindo alçada e autoridade operacional sobre a segurança cibernética.',
+            'Indicação Formal de Diretor Estatutário Responsável perante o BACEN',
+            'A instituição deve indicar perante o Banco Central do Brasil diretor estatutário formalmente responsável pelo cumprimento das disposições da Resolução CMN nº 4.893/2021.',
+            'Homologação cadastral no UNICAD/SISBACEN do Diretor Estatutário com poderes de governança e reporte direto ao Conselho.',
             0, None, 'Critica', 'Todos',
-            'Ata de eleição de diretoria; Registro homologado no BACEN Unicad; Termo de Posse e responsabilidade estatutária.'
+            'Ata de Eleição do Diretor Registrada na Junta Comercial; Certidão UNICAD/BACEN com indicação expressa da responsabilidade pelo Art. 7º.'
         ),
         (
             'REQ-03', dom_map['DOM-01'], 'Art. 9º',
-            'Aprovação pelo Conselho de Administração ou Diretoria',
-            'A política de segurança cibernética e o plano de ação e de resposta a incidentes devem ser aprovados pelo conselho de administração ou pela diretoria da instituição.',
-            'Aprovação formal com registro em ata lavrada de reunião ordinária do Conselho de Administração ou Diretoria Colegiada.',
+            'Aprovação da Política pelo Conselho de Administração ou Diretoria',
+            'A política de segurança cibernética e suas revisões devem ser aprovadas pelo conselho de administração ou pela diretoria da instituição.',
+            'Deliberação colegiada formal registrada em ata arquivada com quórum qualificado.',
             0, None, 'Alta', 'Todos',
-            'Ata de Reunião do Conselho de Administração (ou Diretoria); Parecer do Comitê de Riscos e Cibersegurança.'
+            'Ata formal de reunião do Conselho de Administração ou Diretoria Executiva.'
         ),
         (
             'REQ-04', dom_map['DOM-01'], 'Art. 10',
-            'Revisão Anual Documentada da Política e do Plano',
-            'A política de segurança cibernética e o plano de ação e de resposta a incidentes devem ser documentados e revisados com periodicidade mínima anual.',
-            'Processo cíclico de revisão anual com controle de versões, pareceres técnicos e revalidação pela governança estatutária.',
+            'Revisão Periódica da Política de Cibersegurança (Ciclo Anual)',
+            'A política de segurança cibernética deve ser revisada, no mínimo, a cada 12 (doze) meses, ou sempre que ocorrerem mudanças relevantes na infraestrutura.',
+            'Fluxo anual documentado de revisão, validação de adequação frente a novas ameaças e aprovação de nova versão pelo Conselho.',
             0, None, 'Alta', 'Todos',
-            'Histórico de versionamento; Ata de aprovação da revisão anual; Relatório de alterações e melhorias normativas.'
+            'Histórico de versionamento da política; Parecer anual de conformidade emitido pela área de GRC/Compliance.'
         ),
         (
-            'REQ-05', dom_map['DOM-01'], 'Arts. 4º e 5º',
-            'Divulgação Interna e Publicação de Resumo ao Público',
-            'Divulgação aos funcionários e prestadores de serviços terceirizados em linguagem acessível e publicação na internet de resumo contendo as linhas gerais da política.',
-            'Programa formal de conscientização interna e página pública institucional acessível com o resumo executivo da Política de Cibersegurança.',
+            'REQ-05', dom_map['DOM-01'], 'Art. 2º, §2º',
+            'Divulgação Interna e Externa da Política de Segurança Cibernética',
+            'A instituição deve assegurar a divulgação da política aos colaboradores e manter resumo público acessível aos clientes e usuários.',
+            'Publicação na intranet, termos de ciência no onboarding de funcionários e disponibilização de resumo executivo no site institucional.',
             0, None, 'Media', 'Todos',
-            'URL pública da página de cibersegurança da instituição; Registros de aceite em intranet; Relatórios de campanhas de segurança.'
+            'Link público do resumo no portal institucional; Termos de aceite dos colaboradores no sistema de gestão de RH.'
         ),
 
-        # DOM-02: Os 14 Controles Mínimos Mandatórios da Resolução CMN nº 5.274/2025
+        # DOM-02: 14 Controles Mandatórios da Resolução CMN 5.274/2025
         (
             'REQ-5274-01', dom_map['DOM-02'], 'Art. 3º, §2º, I (Res. 5.274)',
-            'Controle 01/14: Autenticação Robusta e Múltiplos Fatores (MFA)',
-            'Implementação de mecanismos de autenticação robusta, com autenticação multifator (MFA) obrigatória para acessos privilegiados, sistemas críticos e canais externos.',
-            'MFA baseado em fatores independentes (conhecimento, posse, inerência), mitigação de bypass, revogação automática de sessões e proteção contra ataques de força bruta e fadiga de MFA.',
+            'Controle 01/14: Mecanismos de Autenticação Multifator (MFA)',
+            'Adoção de autenticação multifator para acesso a redes, sistemas corporativos, ambientes em nuvem e privilégios administrativos.',
+            'Obrigatoriedade de pelo menos dois fatores de autenticação distintos (conhecimento, posse ou biometria) para 100% dos acessos privilegiados e acessos remotos.',
             1, 1, 'Critica', 'Todos',
-            'Políticas de Identity & Access Management (IAM); Logs de MFA; Relatório de auditoria de acessos administrativos.'
+            'Configuração de IdP/IAM corporativo; Relatório de cobertura de MFA em estações, servidores e consoles de nuvem; Políticas de Conditional Access.'
         ),
         (
             'REQ-5274-02', dom_map['DOM-02'], 'Art. 3º, §2º, II (Res. 5.274)',
@@ -248,63 +275,63 @@ def seed():
         ),
         (
             'REQ-5274-12', dom_map['DOM-02'], 'Art. 3º, §2º, XII (Res. 5.274)',
-            'Controle 12/14: Ações de Inteligência no Ambiente Cibernético (Threat Intel)',
-            'Monitoramento proativo e inteligência sobre ameaças direcionadas à instituição na internet aberta, Deep Web, Dark Web e grupos de comunicação privados.',
-            'Contratação ou estruturação de capacidade de Cyber Threat Intelligence (CTI) para detecção de credenciais vazadas de colaboradores/clientes, menções da marca, criação de domínios maliciosos e planos de ataque.',
+            'Controle 12/14: Monitoramento Contínuo e Inteligência de Ameaças',
+            'Monitoramento 24x7 de eventos de segurança da informação e consumo de fontes qualificadas de inteligência de ameaças (Threat Intelligence).',
+            'SOC com escala 24x7x365, ingestão de IoCs (Indicators of Compromise), monitoramento proativo de vazamentos de credenciais corporativas na Dark Web e fóruns cibernéticos.',
             1, 12, 'Alta', 'Todos',
-            'Contrato/Relatórios da ferramenta de Threat Intelligence; Alertas de monitoramento de Dark Web tratados; Processos de takedown de sites falsos/phishing.'
+            'Contrato/SLA com serviço de SOC/SIEM 24x7; Relatórios periódicos de Threat Intelligence; Registro de feeds de IoC integrados.'
         ),
         (
             'REQ-5274-13', dom_map['DOM-02'], 'Art. 3º, §2º, XIII (Res. 5.274)',
-            'Controle 13/14: Segurança na Comunicação de Dados na RSFN / Open Finance / Pix',
-            'Requisitos adicionais e salvaguardas rigorosas para tráfego eletrônico de dados na Rede do Sistema Financeiro Nacional (RSFN) e ecossistemas abertos.',
-            'Autenticação mTLS bidirecional, certificados ICP-Brasil específicos para SPB/PIX/Open Finance, canais criptografados dedicados e validação contínua de integridade das mensagens financeiras.',
+            'Controle 13/14: Segurança na Rede do Sistema Financeiro Nacional (RSFN)',
+            'Controles específicos de proteção e isolamento lógico para as conexões com a RSFN, mensageria SPB, PIX e serviços do Sistema de Pagamentos Brasileiro.',
+            'Segmentação física ou lógica da RSFN, uso de certificados digitais ICP-Brasil padrão BACEN, proteção perimetral com regras restritas e redundância de circuitos de telecom.',
             1, 13, 'Critica', 'Todos',
-            'Homologação de conectividade RSFN / Banco Central; Certificados SPB/ICP-Brasil ativos; Arquitetura de mensageria PIX e Open Finance auditada.'
+            'Diagrama de interconexão RSFN; Configuração de roteadores e firewalls dedicados ao SPB/PIX; Certificados digitais da RSFN válidos.'
         ),
         (
             'REQ-5274-14', dom_map['DOM-02'], 'Art. 3º, §2º, XIV (Res. 5.274)',
-            'Controle 14/14: Segurança em APIs e Ciclo de Desenvolvimento Seguro (DevSecOps)',
-            'Aplicação de controles de segurança no ciclo de vida de desenvolvimento de software e proteção robusta das interfaces de programação de aplicações (APIs).',
-            'Integração de testes estáticos (SAST) e dinâmicos (DAST) no pipeline CI/CD, gestão de dependências de código aberto (SCA), API Gateway com rate limiting, validação de schemas e autenticação OAuth 2.0 / FAPI.',
+            'Controle 14/14: Segurança no Desenvolvimento de Software (DevSecOps)',
+            'Adoção de práticas de desenvolvimento seguro no ciclo de vida de softwares e APIs, incluindo análises de vulnerabilidades em código-fonte e dependências.',
+            'Integração de testes SAST, DAST e SCA nas esteiras de CI/CD, revisão de segurança com base no OWASP Top 10 e conformidade de segurança para APIs do Open Finance.',
             1, 14, 'Alta', 'Todos',
-            'Relatórios de esteira CI/CD com gates de segurança; Relatórios SAST/DAST; Políticas de segurança do API Gateway (Fapi-compliant).'
+            'Diretrizes de Secure Coding OWASP; Relatórios de análise SAST/DAST emitidos na esteira CI/CD; Atas de aprovação de segurança pré-deploy.'
         ),
 
-        # DOM-03: Plano de Ação e de Resposta a Incidentes (PARI)
+        # DOM-03: PARI & Resposta a Incidentes
         (
-            'REQ-PARI-01', dom_map['DOM-03'], 'Art. 6º',
-            'Plano de Ação e de Resposta a Incidentes (PARI) Estruturado',
-            'A instituição deve estabelecer formalmente plano de ação e de resposta a incidentes contendo ações para prevenção, identificação, contenção, mitigação dos efeitos e recuperação.',
-            'Equipe de resposta (CSIRT/CERT) com papéis definidos, matriz de severidade de incidentes, playbooks para ransomware, vazamento de dados e negação de serviço distribuída (DDoS).',
+            'REQ-PARI-01', dom_map['DOM-03'], 'Arts. 4º e 5º',
+            'Elaboração e Manutenção do Plano de Ação e de Resposta a Incidentes (PARI)',
+            'A instituição deve elaborar e manter plano de ação e de resposta a incidentes contendo ações para prevenção, detecção, contenção, erradicação e recuperação de incidentes cibernéticos.',
+            'PARI formalizado contendo equipe de CSIRT estabelecida, papéis e responsabilidades, canais de escalonamento e playbooks técnicos para diferentes cenários de ataque.',
             0, None, 'Critica', 'Todos',
-            'Documento formal do PARI aprovado; Playbooks de Resposta a Incidentes por cenário; Matriz de acionamento do Comitê de Crise.'
+            'Documento formal do PARI aprovado; Portaria ou ata de designação dos membros do CSIRT; Playbooks operacionais de resposta a incidentes.'
         ),
         (
-            'REQ-PARI-02', dom_map['DOM-03'], 'Art. 6º, §2º',
+            'REQ-PARI-02', dom_map['DOM-03'], 'Art. 6º',
             'Comunicação de Incidentes Relevantes ao Banco Central do Brasil',
-            'A instituição deve comunicar tempestivamente ao Banco Central do Brasil a ocorrência de incidentes cibernéticos relevantes que possam impactar as operações ou a reputação.',
-            'Fluxo documentado de notificação regulatória no sistema BCB (SISBACEN / Risco Operacional), prazos de escalonamento e definição dos critérios objetivos de relevância do incidente.',
+            'A instituição deve comunicar formalmente ao Banco Central do Brasil os incidentes relevantes no prazo estabelecido na regulamentação, detalhando causas e impactos.',
+            'Procedimento operacional padrão (POP) de comunicação via SISBACEN / Protocolo Digital em até 24 horas após caracterização de relevância, com modelo de relatório preliminar.',
             0, None, 'Critica', 'Todos',
-            'Procedimento operacional padrão (POP) de comunicação ao BACEN; Histórico de notificações no SISBACEN ou termo de inexistência de eventos relevantes no período.'
+            'Procedimento documentado de notificação de incidentes ao BACEN; Histórico de notificações no Sisbacen ou termo de inocorrência.'
         ),
         (
-            'REQ-PARI-03', dom_map['DOM-03'], 'Art. 6º, §3º',
+            'REQ-PARI-03', dom_map['DOM-03'], 'Art. 5º, §2º',
             'Compartilhamento de Informações sobre Incidentes Relevantes',
-            'Mecanismos para compartilhamento de informações sobre incidentes relevantes com as demais instituições autorizadas a funcionar pelo Banco Central do Brasil.',
-            'Participação em fóruns ou redes setoriais de compartilhamento de inteligência cibernética (como Febraban Cyber Hub, Anbima ou similar), preservando sigilo bancário.',
+            'Mecanismos de compartilhamento tempestivo de informações sobre incidentes relevantes e vulnerabilidades com outras instituições financeiras e o BACEN.',
+            'Adesão e integração formal ao Cyber Hub Febraban ou rede setorial de compartilhamento de indicadores de comprometimento (IoCs).',
             0, None, 'Media', 'Todos',
-            'Comprovante de associação ou integração à rede de compartilhamento do SFN; Registros de indicadores de comprometimento (IoCs) compartilhados/recebidos.'
+            'Comprovante de filiação à rede de compartilhamento setorial (Febraban/Anbima); Registro de intercâmbio de IoCs.'
         ),
 
         # DOM-04: Testes de Intrusão & Pentests
         (
-            'REQ-TEST-01', dom_map['DOM-04'], 'Arts. 3º e 6º',
-            'Testes de Intrusão (Pentest) Periódicos por Terceiros Independentes',
-            'Realização periódica de testes de intrusão nos sistemas de informação, redes, aplicações móveis e ambientes de nuvem da instituição.',
-            'Pentests executados no mínimo anualmente por consultoria externa especializada e independente, abrangendo abordagens Black Box e Gray Box em sistemas críticos (PIX, Core Banking, Canais Digitais).',
+            'REQ-TEST-01', dom_map['DOM-04'], 'Art. 3º, IV',
+            'Execução Periódica de Testes de Intrusão (Pentests) Independentes',
+            'Realização periódica de testes de intrusão nos sistemas e aplicações críticas por equipe ou consultoria externa independente da equipe de desenvolvimento e operação.',
+            'Pentests anuais (ou semestrais para S1/S2/S3) abrangendo aplicações móveis, web banking, APIs e infraestrutura de perímetro, com metodologia OSSTMM/OWASP.',
             0, None, 'Critica', 'Todos',
-            'Relatório Executivo e Técnico do último Teste de Intrusão; Termo de Independência da empresa avaliadora; Plano de Remediação das vulnerabilidades encontradas.'
+            'Relatório Executivo e Técnico de Teste de Intrusão emitido por terceira parte; Atestado de independência da consultoria executora.'
         ),
         (
             'REQ-TEST-02', dom_map['DOM-04'], 'Art. 8º',
@@ -315,7 +342,7 @@ def seed():
             'Relatório de Reteste de Intrusão comprovando mitigação; Planilha de acompanhamento com datas e responsáveis.'
         ),
 
-        # DOM-05: Contratação de Serviços de Processamento, Armazenamento e Nuvem
+        # DOM-05: Contratação de Serviços de Nuvem
         (
             'REQ-CLOUD-01', dom_map['DOM-05'], 'Arts. 11 e 12',
             'Governança e Due Diligence Prévia para Contratação de Serviços Relevantes',
@@ -399,55 +426,87 @@ def seed():
     cursor.execute("SELECT id, codigo FROM requisitos;")
     req_map = {row['codigo']: row['id'] for row in cursor.fetchall()}
 
-    # 4. Avaliações Iniciais de Compliance (vinculadas à instituicao_id = 1)
-    avaliacoes = [
-        (1, req_map['REQ-01'], 'atendido', 100, 'Política de Cibersegurança revisada e aprovada pelo Conselho de Administração.', 'Governança Corporativa', '2025-11-25', '2026-02-10', 'Auditoria Interna', 'Total conformidade com o Art. 2º.'),
-        (1, req_map['REQ-02'], 'atendido', 100, 'Diretor Estatutário homologado formalmente no Unicad BACEN sob número de processo regulatório ativo.', 'Jurídico Corporativo', '2025-05-10', '2026-01-15', 'Compliance & Risco', 'Registro checado no Sisbacen.'),
-        (1, req_map['REQ-03'], 'atendido', 100, 'Aprovação unânime em reunião ordinária do Conselho de Administração.', 'Secretaria de Governança', '2025-11-25', '2026-02-10', 'Auditoria Interna', 'Ata arquivada e registrada.'),
+    # 4. Avaliações Iniciais para Instituição 1 (Alpha Bank - S3)
+    avaliacoes_inst1 = [
+        (1, req_map['REQ-01'], 'atendido', 100, 'Política de Cibersegurança revisada e aprovada pelo Conselho.', 'Governança Corporativa', '2025-11-25', '2026-02-10', 'Auditoria Interna', 'Total conformidade com o Art. 2º.'),
+        (1, req_map['REQ-02'], 'atendido', 100, 'Diretor Estatutário homologado formalmente no Unicad BACEN.', 'Jurídico Corporativo', '2025-05-10', '2026-01-15', 'Compliance & Risco', 'Registro checado no Sisbacen.'),
+        (1, req_map['REQ-03'], 'atendido', 100, 'Aprovação unânime em reunião ordinária do Conselho.', 'Secretaria de Governança', '2025-11-25', '2026-02-10', 'Auditoria Interna', 'Ata arquivada e registrada.'),
         (1, req_map['REQ-04'], 'atendido', 100, 'Revisão anual ciclo 2025/2026 finalizada e documentada.', 'CISO Office', '2026-02-15', '2026-02-15', 'Auditoria Interna', 'Próxima revisão agendada para fev/2027.'),
-        (1, req_map['REQ-05'], 'atendido', 100, 'Resumo executivo publicado no portal web oficial e campanhas de segurança realizadas aos colaboradores.', 'Comunicação & CISO', '2025-12-01', '2026-02-10', 'Compliance', 'Página web ativa.'),
-
-        # DOM-02 (Controles 5.274)
-        (1, req_map['REQ-5274-01'], 'atendido', 100, 'MFA baseado em FIDO2 e aplicativo autenticador habilitado para 100% dos colaboradores e sistemas administrativos.', 'Equipe de IAM', '2026-01-10', '2026-02-20', 'Auditoria Externa TI', 'MFA mandatório em Active Directory e AWS SSO.'),
-        (1, req_map['REQ-5274-02'], 'atendido', 100, 'Criptografia AES-256 habilitada em repouso nos bancos RDS/S3 e TLS 1.3 obrigatório para todas as comunicações.', 'Infraestrutura Cloud', '2025-10-15', '2026-02-18', 'Auditoria Externa TI', 'Chaves gerenciadas em AWS KMS e HSM On-premise.'),
-        (1, req_map['REQ-5274-03'], 'atendido', 100, 'Solução EDR instalada em 100% dos endpoints e servidores; Firewall NGFW ativo.', 'SOC & Operações de Segurança', '2025-09-30', '2026-02-12', 'Auditoria Interna', 'Alertas monitorados 24x7 pelo SOC parceiro.'),
-        (1, req_map['REQ-5274-04'], 'parcialmente_atendido', 65, 'DLP implementado para e-mails institucionais e endpoints. Falta extensão completa para inspeção de repositórios Git corporativos.', 'Segurança da Informação', '2026-03-31', '2026-02-05', 'Auditoria Interna', 'Plano de ação em andamento para cobrir código-fonte.'),
-        (1, req_map['REQ-5274-05'], 'atendido', 100, 'Solução de antimalware avançado com motor heurístico e isolamento automático de ameaças.', 'Operações de TI', '2025-08-20', '2026-01-20', 'Auditoria Interna', 'Taxa de cobertura de 100% nos ativos catalogados.'),
-        (1, req_map['REQ-5274-06'], 'atendido', 100, 'Centralização de logs no SIEM com NTP sincronizado ao Observatório Nacional (ON) e bucket imutável WORM.', 'Engenharia de Segurança', '2025-11-05', '2026-02-14', 'Auditoria Externa TI', 'Retenção configurada para 5 anos com hash SHA-256.'),
-        (1, req_map['REQ-5274-07'], 'atendido', 100, 'Backups diários com repositórios imutáveis (Object Lock). Último teste de restore integral executado em 15/01/2026.', 'Infraestrutura & DBA', '2026-01-15', '2026-02-15', 'Auditoria Interna', 'RTO obtido: 2h35m (meta: 4h); RPO obtido: 12 min (meta: 1h).'),
-        (1, req_map['REQ-5274-08'], 'parcialmente_atendido', 75, 'Scans semanais de vulnerabilidades ativos. SLA de correção de falhas críticas em 7 dias cumprido em 92% dos casos.', 'Vulnerability Management', '2026-03-15', '2026-02-10', 'Auditoria Interna', 'Alguns sistemas legados necessitam de janela de homologação.'),
-        (1, req_map['REQ-5274-09'], 'atendido', 100, 'Hardening baseado no CIS Benchmark Level 1 aplicado em todas as Golden Images Linux e Windows.', 'DevSecOps', '2025-12-10', '2026-02-08', 'Auditoria Interna', 'Conformidade de configuração aferida em 98.4%.'),
-        (1, req_map['REQ-5274-10'], 'atendido', 100, 'Microssegmentação via VPC e Security Groups; DMZ para serviços expostos e WAF ativo.', 'Redes e Segurança', '2025-10-01', '2026-01-30', 'Auditoria Externa TI', 'Tráfego leste-oeste estritamente restrito por zero trust.'),
-        (1, req_map['REQ-5274-11'], 'em_implementacao', 50, 'Inventário de certificados criado, porém processo de renovação ainda possui etapas manuais que estão sendo automatizadas via Cert-Manager.', 'Infraestrutura Cloud', '2026-03-31', '2026-02-01', 'Auditoria Interna', 'Exigência da Resolução 5.274 em fase final de automação.'),
-        (1, req_map['REQ-5274-12'], 'em_implementacao', 40, 'Processo de contratação de provedor especializado de Threat Intelligence (Dark Web e Deep Web) em homologação contratual.', 'CISO Office', '2026-04-15', '2026-02-05', 'Auditoria Interna', 'Novo requisito formal da Resolução CMN 5.274/2025.'),
-        (1, req_map['REQ-5274-13'], 'atendido', 100, 'Comunicação na RSFN operando com mTLS e certificados ICP-Brasil específicos (SPB/PIX). Redundância com dois roteadores dedicados.', 'Telecom & Conectividade BACEN', '2025-07-22', '2026-02-11', 'BACEN Fiscalização', 'Homologação oficial BACEN para PIX e SPB regular.'),
-        (1, req_map['REQ-5274-14'], 'parcialmente_atendido', 70, 'SAST e SCA integrados no pipeline GitLab CI. Cobertura de DAST em fase de expansão para as APIs legadas.', 'DevSecOps', '2026-03-30', '2026-02-09', 'Auditoria Interna', 'APIs do Open Finance 100% aderentes ao perfil FAPI 1.0 Advanced.'),
-
-        # DOM-03
-        (1, req_map['REQ-PARI-01'], 'atendido', 100, 'PARI formalizado contendo playbooks operacionais e CSIRT estruturado com plantão de prontidão.', 'CSIRT Lead', '2025-11-15', '2026-02-10', 'Auditoria Interna', 'Simulado de mesa realizado em nov/2025.'),
-        (1, req_map['REQ-PARI-02'], 'atendido', 100, 'Procedimento operacional padrão estabelecendo fluxo e prazos para comunicação ao BACEN via Sisbacen.', 'Compliance Regulatório', '2025-10-10', '2026-01-20', 'Compliance', 'Nenhum incidente crítico demandou notificação no último ano.'),
-        (1, req_map['REQ-PARI-03'], 'atendido', 100, 'Instituição filiada ao Cyber Hub Febraban com compartilhamento de IoCs e alertas de inteligência de fraude.', 'Threat Intelligence', '2025-06-01', '2026-02-01', 'Auditoria Interna', 'Feed de IoCs integrado diretamente ao firewall/SIEM.'),
-
-        # DOM-04
-        (1, req_map['REQ-TEST-01'], 'atendido', 100, 'Pentest executado por empresa independente cobrindo Mobile Banking, Web e APIs PIX.', 'CISO Office', '2025-10-30', '2026-01-10', 'Auditoria Externa', 'Relatório técnico e atestado de independência emitidos.'),
-        (1, req_map['REQ-TEST-02'], 'atendido', 100, 'Reteste realizado confirmando que todas as 2 vulnerabilidades críticas apontadas foram totalmente mitigadas.', 'Equipe de Aplicações', '2025-12-15', '2026-01-15', 'Auditoria Externa', 'Termo de encerramento emitido pela consultoria externa.'),
-
-        # DOM-05
-        (1, req_map['REQ-CLOUD-01'], 'atendido', 100, 'Due Diligence anual concluída para AWS e Microsoft Azure com avaliação dos relatórios SOC 2 Type II e ISO 27001.', 'Gestão de Terceiros (TPRM)', '2025-09-15', '2026-02-12', 'Auditoria Interna', 'Fornecedores classificados com risco residual baixo.'),
-        (1, req_map['REQ-CLOUD-02'], 'atendido', 100, 'Todas as contratações e aditivos relevantes em nuvem comunicados ao BACEN com 60 dias de antecedência mínima.', 'Regulatório & Jurídico', '2025-08-01', '2026-01-18', 'Auditoria Interna', 'Protocolos do Sisbacen arquivados e válidos.'),
-        (1, req_map['REQ-CLOUD-03'], 'atendido', 100, 'Dados armazenados em regiões nos EUA e Brasil. Convênio formal BACEN-FED verificado.', 'Jurídico Regulatório', '2025-08-01', '2026-01-18', 'Auditoria Interna', 'Parecer jurídico atestando existência de convênio multilateral.'),
-        (1, req_map['REQ-CLOUD-04'], 'atendido', 100, 'Todos os contratos de prestação de serviços relevantes contêm as cláusulas obrigatórias dos incisos I a V do Art. 17.', 'Jurídico Contratos', '2025-10-20', '2026-02-10', 'Auditoria Externa', 'Cláusulas de acesso BACEN e segregação lógica checadas.'),
-
-        # DOM-06
-        (1, req_map['REQ-CONT-01'], 'atendido', 100, 'Plano de Continuidade e DR testado com sucesso com failover simulado da região principal para secundária.', 'Continuidade de Negócios (BCM)', '2025-11-28', '2026-02-15', 'Auditoria Interna', 'Tempo total de recuperação de sistemas críticos: 48 minutos.'),
-        (1, req_map['REQ-CONT-02'], 'parcialmente_atendido', 60, 'Plano de saída documentado para serviços IaaS. Falta detalhamento do procedimento de migração de dados do SaaS de CRM.', 'Arquitetura Corporativa', '2026-04-30', '2026-01-25', 'Auditoria Interna', 'Gap apontado pela auditoria interna em fase de plano de ação.'),
-
-        # DOM-07
-        (1, req_map['REQ-AUD-01'], 'atendido', 100, 'Relatório anual com data-base 31/12/2025 elaborado e aprovado pelo Comitê de Auditoria e Conselho.', 'Diretor Estatutário CISO', '2026-02-15', '2026-02-18', 'Conselho de Administração', 'Relatório completo disponível no sistema para fiscalização BACEN.'),
-        (1, req_map['REQ-AUD-02'], 'atendido', 100, 'Repositório digital estruturado com controle de acesso, backup imutável e trilha de auditoria para retenção de 5 anos.', 'Compliance & Arquivo', '2026-02-15', '2026-02-18', 'Auditoria Interna', 'Evidências catalogadas e auditadas.')
+        (1, req_map['REQ-05'], 'atendido', 100, 'Resumo executivo publicado no portal web oficial.', 'Comunicação & CISO', '2025-12-01', '2026-02-10', 'Compliance', 'Página web ativa.'),
+        (1, req_map['REQ-5274-01'], 'atendido', 100, 'MFA baseado em FIDO2 e app TOTP habilitado para 100% dos usuários.', 'Equipe de IAM', '2026-01-10', '2026-02-20', 'Auditoria Externa TI', 'MFA mandatório em AD e AWS SSO.'),
+        (1, req_map['REQ-5274-02'], 'atendido', 100, 'Criptografia AES-256 e TLS 1.3 obrigatório em todas as conexões.', 'Infraestrutura Cloud', '2025-10-15', '2026-02-18', 'Auditoria Externa TI', 'Chaves gerenciadas em AWS KMS e HSM.'),
+        (1, req_map['REQ-5274-03'], 'atendido', 100, 'Solução EDR instalada em 100% dos endpoints e servidores.', 'SOC & Operações', '2025-09-30', '2026-02-12', 'Auditoria Interna', 'Alertas monitorados 24x7 pelo SOC.'),
+        (1, req_map['REQ-5274-04'], 'parcialmente_atendido', 65, 'DLP implementado para e-mails institucionais e endpoints.', 'Segurança da Informação', '2026-03-31', '2026-02-05', 'Auditoria Interna', 'Plano de ação em andamento para cobrir Git.'),
+        (1, req_map['REQ-5274-05'], 'atendido', 100, 'Antimalware corporativo com motor heurístico ativo.', 'Operações de TI', '2025-08-20', '2026-01-20', 'Auditoria Interna', 'Taxa de cobertura 100%.'),
+        (1, req_map['REQ-5274-06'], 'atendido', 100, 'Logs centralizados em SIEM com NTP sincronizado ao Observatório Nacional.', 'Engenharia de Segurança', '2025-11-05', '2026-02-14', 'Auditoria Externa TI', 'Retenção configurada para 5 anos com hash SHA-256.'),
+        (1, req_map['REQ-5274-07'], 'atendido', 100, 'Backups diários com repositórios imutáveis (Object Lock).', 'Infraestrutura & DBA', '2026-01-15', '2026-02-15', 'Auditoria Interna', 'RTO obtido: 2h35m; RPO obtido: 12 min.'),
+        (1, req_map['REQ-5274-08'], 'parcialmente_atendido', 75, 'Scans semanais de vulnerabilidades ativos com SLA de remediação.', 'Vulnerability Management', '2026-03-15', '2026-02-10', 'Auditoria Interna', '92% de cumprimento do SLA.'),
+        (1, req_map['REQ-5274-09'], 'atendido', 100, 'Hardening baseado no CIS Benchmark aplicado em todas as Golden Images.', 'DevSecOps', '2025-12-10', '2026-02-08', 'Auditoria Interna', 'Conformidade de configuração aferida em 98.4%.'),
+        (1, req_map['REQ-5274-10'], 'atendido', 100, 'Microssegmentação via VPC e Security Groups; DMZ e WAF ativo.', 'Redes e Segurança', '2025-10-01', '2026-01-30', 'Auditoria Externa TI', 'Tráfego leste-oeste estritamente restrito.'),
+        (1, req_map['REQ-5274-11'], 'em_implementacao', 50, 'Inventário de certificados criado, automação via Cert-Manager em curso.', 'Infraestrutura Cloud', '2026-03-31', '2026-02-01', 'Auditoria Interna', 'Exigência da Resolução 5.274 em fase final.'),
+        (1, req_map['REQ-5274-12'], 'em_implementacao', 40, 'Contratação de provedor de Threat Intelligence em homologação contratual.', 'CISO Office', '2026-04-15', '2026-02-05', 'Auditoria Interna', 'Novo requisito formal da Resolução CMN 5.274/2025.'),
+        (1, req_map['REQ-5274-13'], 'atendido', 100, 'Comunicação na RSFN operando com mTLS e certificados ICP-Brasil específicos.', 'Telecom & Conectividade BACEN', '2025-07-22', '2026-02-11', 'BACEN Fiscalização', 'Homologação oficial BACEN para PIX e SPB regular.'),
+        (1, req_map['REQ-5274-14'], 'parcialmente_atendido', 70, 'SAST e SCA integrados no pipeline GitLab CI.', 'DevSecOps', '2026-03-30', '2026-02-09', 'Auditoria Interna', 'APIs do Open Finance 100% aderentes ao perfil FAPI 1.0.'),
+        (1, req_map['REQ-PARI-01'], 'atendido', 100, 'PARI formalizado com playbooks operacionais e CSIRT 24x7.', 'CSIRT Lead', '2025-11-15', '2026-02-10', 'Auditoria Interna', 'Simulado de mesa realizado em nov/2025.'),
+        (1, req_map['REQ-PARI-02'], 'atendido', 100, 'Procedimento operacional de comunicação ao BACEN via Sisbacen.', 'Compliance Regulatório', '2025-10-10', '2026-01-20', 'Compliance', 'Nenhum incidente crítico no período.'),
+        (1, req_map['REQ-PARI-03'], 'atendido', 100, 'Filiada ao Cyber Hub Febraban com compartilhamento de IoCs.', 'Threat Intelligence', '2025-06-01', '2026-02-01', 'Auditoria Interna', 'Feed de IoCs integrado diretamente ao firewall/SIEM.'),
+        (1, req_map['REQ-TEST-01'], 'atendido', 100, 'Pentest executado por empresa independente cobrindo Mobile, Web e PIX.', 'CISO Office', '2025-10-30', '2026-01-10', 'Auditoria Externa', 'Relatório e atestado de independência emitidos.'),
+        (1, req_map['REQ-TEST-02'], 'atendido', 100, 'Reteste realizado confirmando mitigação das 2 falhas apontadas.', 'Equipe de Aplicações', '2025-12-15', '2026-01-15', 'Auditoria Externa', 'Termo de encerramento emitido.'),
+        (1, req_map['REQ-CLOUD-01'], 'atendido', 100, 'Due Diligence anual concluída para AWS e Microsoft Azure.', 'Gestão de Terceiros (TPRM)', '2025-09-15', '2026-02-12', 'Auditoria Interna', 'Classificação de risco residual baixo.'),
+        (1, req_map['REQ-CLOUD-02'], 'atendido', 100, 'Contratações e aditivos relevantes em nuvem comunicados ao BACEN com antecedência de 60 dias.', 'Regulatório & Jurídico', '2025-08-01', '2026-01-18', 'Auditoria Interna', 'Protocolos do Sisbacen arquivados.'),
+        (1, req_map['REQ-CLOUD-03'], 'atendido', 100, 'Dados armazenados nos EUA e Brasil. Convênio formal BACEN-FED verificado.', 'Jurídico Regulatório', '2025-08-01', '2026-01-18', 'Auditoria Interna', 'Parecer jurídico atestando existência de convênio.'),
+        (1, req_map['REQ-CLOUD-04'], 'atendido', 100, 'Todos os contratos de nuvem contêm as cláusulas mandatórias do Art. 17.', 'Jurídico Contratos', '2025-10-20', '2026-02-10', 'Auditoria Externa', 'Cláusulas de acesso BACEN e segregação lógica checadas.'),
+        (1, req_map['REQ-CONT-01'], 'atendido', 100, 'Plano de Continuidade e DR testado com failover simulado.', 'Continuidade de Negócios (BCM)', '2025-11-28', '2026-02-15', 'Auditoria Interna', 'RTO de recuperação: 48 minutos.'),
+        (1, req_map['REQ-CONT-02'], 'parcialmente_atendido', 60, 'Plano de saída documentado para IaaS; detalhamento de SaaS CRM em andamento.', 'Arquitetura Corporativa', '2026-04-30', '2026-01-25', 'Auditoria Interna', 'Gap apontado pela auditoria em remediação.'),
+        (1, req_map['REQ-AUD-01'], 'atendido', 100, 'Relatório anual com data-base 31/12/2025 aprovado pelo Conselho.', 'Diretor Estatutário CISO', '2026-02-15', '2026-02-18', 'Conselho de Administração', 'Relatório completo disponível no sistema.'),
+        (1, req_map['REQ-AUD-02'], 'atendido', 100, 'Repositório digital com controle de acesso e retenção por 5 anos.', 'Compliance & Arquivo', '2026-02-15', '2026-02-18', 'Auditoria Interna', 'Evidências catalogadas e auditadas.')
     ]
 
-    for a in avaliacoes:
+    for a in avaliacoes_inst1:
+        cursor.execute("""
+        INSERT INTO avaliacoes (
+            instituicao_id, requisito_id, status, percentual_aderencia, justificativa, responsavel,
+            prazo_adequacao, ultima_auditoria, avaliador, observacoes_auditor
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, a)
+
+    # 4b. Avaliações Iniciais para Instituição 2 (Torra SCD - S4)
+    avaliacoes_inst2 = [
+        (2, req_map['REQ-01'], 'atendido', 100, 'Política de Cibersegurança simplificada e aderente ao segmento S4 aprovada pela Diretoria.', 'Compliance Torra', '2025-10-10', '2026-01-15', 'Auditoria Interna', 'Aderente ao Art. 2º.'),
+        (2, req_map['REQ-02'], 'atendido', 100, 'Diretor de Operações formalmente homologado no Unicad BACEN sob nº BACEN-UNICAD-4512.', 'Jurídico Torra', '2025-06-15', '2026-01-10', 'Compliance', 'Homologação confirmada.'),
+        (2, req_map['REQ-03'], 'atendido', 100, 'Aprovação por deliberação da Diretoria Executiva em ata registrada.', 'Secretaria Executiva', '2025-10-10', '2026-01-15', 'Auditoria Interna', 'Ata registrada.'),
+        (2, req_map['REQ-04'], 'atendido', 100, 'Revisão anual ciclo 2025/2026 efetuada em janeiro de 2026.', 'Equipe de Segurança', '2026-01-20', '2026-01-20', 'Auditoria Interna', 'Revisão arquivada.'),
+        (2, req_map['REQ-05'], 'atendido', 100, 'Resumo da política disponibilizado na área institucional do app Torra Crédito.', 'Comunicação', '2025-11-01', '2026-01-15', 'Compliance', 'Disponível no app.'),
+        (2, req_map['REQ-5274-01'], 'atendido', 100, 'MFA obrigatório via Google Authenticator para todos os operadores de crédito e DevOps.', 'SecOps Torra', '2025-11-20', '2026-01-18', 'Auditoria Interna', '100% de adesão nos acessos internos.'),
+        (2, req_map['REQ-5274-02'], 'atendido', 100, 'Criptografia de ponta a ponta TLS 1.3 e banco de dados Postgres criptografado em repouso.', 'Engenharia de Software', '2025-09-10', '2026-01-12', 'Auditoria Interna', 'KMS AWS ativo.'),
+        (2, req_map['REQ-5274-03'], 'atendido', 100, 'Agentes EDR implantados em todas as instâncias de microsserviços e estações.', 'SecOps Torra', '2025-10-05', '2026-01-14', 'Auditoria Interna', 'Integração com Datadog Security.'),
+        (2, req_map['REQ-5274-04'], 'parcialmente_atendido', 55, 'DLP configurado no Google Workspace corporativo. Bloqueio em endpoints ainda em implantação.', 'Segurança da Informação', '2026-05-15', '2026-01-10', 'Auditoria Interna', 'Ação 5W2H em andamento.'),
+        (2, req_map['REQ-5274-05'], 'atendido', 100, 'Antivírus corporativo gerenciado em nuvem com isolamento automatizado.', 'Suporte TI', '2025-08-15', '2026-01-10', 'Auditoria Interna', 'Endpoints cobertos.'),
+        (2, req_map['REQ-5274-06'], 'atendido', 100, 'Centralização de logs em bucket S3 com Object Lock e NTP sincronizado.', 'DevSecOps Torra', '2025-10-25', '2026-01-19', 'Auditoria Interna', 'Retenção por 5 anos garantida.'),
+        (2, req_map['REQ-5274-07'], 'atendido', 100, 'Rotina diária de snapshots de banco de dados com replicação multi-região.', 'DBA Torra', '2025-12-01', '2026-01-15', 'Auditoria Interna', 'Último teste de restore: 15/12/2025.'),
+        (2, req_map['REQ-5274-08'], 'parcialmente_atendido', 60, 'Scans mensais de vulnerabilidades executados; remediação de falhas médias com prazo estendido.', 'SecOps Torra', '2026-04-10', '2026-01-12', 'Auditoria Interna', 'Necessidade de automação de patch.'),
+        (2, req_map['REQ-5274-09'], 'atendido', 100, 'Imagens Docker baseadas em distroless e CIS Benchmark para contêineres.', 'DevSecOps', '2025-11-15', '2026-01-16', 'Auditoria Interna', 'Scans no pipeline de deploy.'),
+        (2, req_map['REQ-5274-10'], 'atendido', 100, 'Isolamento de VPC e firewalls Cloudflare WAF ativos na API pública.', 'Redes e Cloud', '2025-09-01', '2026-01-15', 'Auditoria Interna', 'Ambientes segregados.'),
+        (2, req_map['REQ-5274-11'], 'atendido', 100, 'Certificados TLS 1.3 automatizados via Let''s Encrypt e mTLS no conector SPI.', 'Infraestrutura Cloud', '2025-11-10', '2026-01-18', 'Auditoria Interna', 'Validade monitorada por robô.'),
+        (2, req_map['REQ-5274-12'], 'em_implementacao', 35, 'Estruturação de processo de Threat Intelligence e acompanhamento de canais de fraude.', 'Risco Operacional', '2026-05-30', '2026-01-10', 'Auditoria Interna', 'Em contratação de ferramenta.'),
+        (2, req_map['REQ-5274-13'], 'atendido', 100, 'Conector Pix via participante direto (PST) homologado perante o BACEN.', 'Telecom & Pix', '2025-08-20', '2026-01-15', 'Auditoria Interna', 'Canal criptografado seguro.'),
+        (2, req_map['REQ-5274-14'], 'parcialmente_atendido', 60, 'Análise estática (SAST) integrada ao GitHub Actions. DAST em fase piloto.', 'DevSecOps', '2026-04-30', '2026-01-10', 'Auditoria Interna', 'Ajustando thresholds de bloqueio.'),
+        (2, req_map['REQ-PARI-01'], 'atendido', 100, 'PARI aprovado para instituição S4 contendo fluxos essenciais de contenção.', 'Líder CSIRT Torra', '2025-10-15', '2026-01-15', 'Auditoria Interna', 'Playbooks básicos validados.'),
+        (2, req_map['REQ-PARI-02'], 'atendido', 100, 'Procedimento de comunicação ao BACEN no Sisbacen formalizado.', 'Compliance Torra', '2025-10-15', '2026-01-15', 'Compliance', 'Prazos alinhados ao Art. 6º.'),
+        (2, req_map['REQ-PARI-03'], 'parcialmente_atendido', 50, 'Processo de filiação ao grupo setorial de cibersegurança da ABFintechs em curso.', 'Relações Institucionais', '2026-04-15', '2026-01-10', 'Auditoria Interna', 'Fase final de associação.'),
+        (2, req_map['REQ-TEST-01'], 'atendido', 100, 'Pentest anual na API de concessão de crédito realizado por terceira parte.', 'CISO Office', '2025-09-30', '2026-01-12', 'Auditoria Externa', 'Laudo técnico conclusivo emitido.'),
+        (2, req_map['REQ-TEST-02'], 'atendido', 100, 'Reteste realizado comprovando correção da fragilidade de média severidade.', 'Desenvolvimento', '2025-11-20', '2026-01-12', 'Auditoria Externa', 'Vulnerabilidade sanada.'),
+        (2, req_map['REQ-CLOUD-01'], 'atendido', 100, 'Due Diligence prévia realizada para AWS e Datadog.', 'Gestão de Fornecedores', '2025-07-20', '2026-01-10', 'Auditoria Interna', 'Relatórios SOC 2 analisados.'),
+        (2, req_map['REQ-CLOUD-02'], 'atendido', 100, 'Notificação prévia de 60 dias ao BACEN protocolada via Sisbacen.', 'Jurídico Torra', '2025-06-01', '2026-01-10', 'Auditoria Interna', 'Protocolo regular.'),
+        (2, req_map['REQ-CLOUD-03'], 'atendido', 100, 'Serviços de nuvem em região Brasil (São Paulo).', 'Infraestrutura Cloud', '2025-06-01', '2026-01-10', 'Auditoria Interna', 'Processamento local.'),
+        (2, req_map['REQ-CLOUD-04'], 'atendido', 100, 'Contratos de processamento e nuvem com cláusulas do Art. 17.', 'Jurídico Torra', '2025-08-10', '2026-01-10', 'Auditoria Interna', 'Cláusulas de acesso BACEN ativas.'),
+        (2, req_map['REQ-CONT-01'], 'atendido', 100, 'Plano de Continuidade Operacional e DR testado para a esteira de crédito.', 'Continuidade de Negócios', '2025-11-05', '2026-01-14', 'Auditoria Interna', 'RTO atingido: 35 min.'),
+        (2, req_map['REQ-CONT-02'], 'em_implementacao', 45, 'Documentação do plano de reversibilidade e portabilidade de dados de crédito.', 'Arquitetura de Soluções', '2026-05-30', '2026-01-10', 'Auditoria Interna', 'Elaboração do plano em andamento.'),
+        (2, req_map['REQ-AUD-01'], 'atendido', 100, 'Relatório anual com data-base 31/12/2025 em elaboração e revisão executiva.', 'Diretor de Cibersegurança', '2026-01-20', '2026-01-20', 'Diretoria', 'Em processo de emissão de parecer.'),
+        (2, req_map['REQ-AUD-02'], 'atendido', 100, 'Repositório de evidências mantido com trilha de integridade para 5 anos.', 'Compliance Torra', '2026-01-20', '2026-01-20', 'Auditoria Interna', 'Guarda regulatória assegurada.')
+    ]
+
+    for a in avaliacoes_inst2:
         cursor.execute("""
         INSERT INTO avaliacoes (
             instituicao_id, requisito_id, status, percentual_aderencia, justificativa, responsavel,
@@ -457,73 +516,125 @@ def seed():
 
     conn.commit()
 
-    # 5. MÓDULO PARI: Governança do CSIRT & Comunicação BACEN (Art. 6º)
+    # 5. MÓDULO PARI: Governança do CSIRT (Inst 1 e Inst 2)
     cursor.execute("""
     INSERT INTO pari_governanca (
         instituicao_id, lider_csirt, email_csirt, telefone_plantao_247, membros_csirt,
         comite_crise, canais_emergencia, criterios_relevancia_bacen, procedimento_sisbacen,
         data_ultima_revisao_pari, versao_pari
-    ) VALUES (
+    ) VALUES 
+    (
         1,
         'Eng. Marcos Vinícius Ferreira',
         'csirt@alphabank.com.br',
         '(11) 98765-4321 (Plantão 24x7)',
-        'Líder CSIRT (Coordenação), Analista Sênior SOC (Triagem), Engenheiro de Redes & Firewall (Contenção), Especialista Forense Computacional, DBA Líder (Dados), Encarregado DPO (LGPD).',
-        'Diretor Estatutário Responsável (Art. 7º), Diretor Presidente (CEO), CISO Corporativo, Diretor Jurídico / DPO e Assessor Chefe de Relações Institucionais.',
-        'Canal de voz criptografado dedicado (out-of-band), sala de guerra física isolada e e-mails de contingência fora da infraestrutura corporativa.',
-        'São classificados como RELEVANTES para notificação obrigatória ao BACEN: (1) Indisponibilidade de serviços bancários essenciais (PIX, TED, Internet Banking) por mais de 2 horas; (2) Exfiltração ou vazamento confirmado de dados protegidos por sigilo bancário ou dados cadastrais sensíveis; (3) Fraudes cibernéticas com impacto financeiro relevante ou potencial contaminação sistêmica; (4) Incidentes com ampla exposição na mídia que afetem a reputação da instituição.',
-        'Notificação compulsória em até 24 horas após a caracterização do incidente como relevante, realizada via módulo de Risco Operacional no Sisbacen / Protocolo Digital do Banco Central do Brasil, acompanhada de relatório preliminar e plano de mitigação.',
+        'Líder CSIRT (Coordenação), Analista Sênior SOC (Triagem), Engenheiro de Redes & Firewall, Especialista Forense, DBA Líder, Encarregado DPO.',
+        'Diretor Estatutário Responsável (Art. 7º), Diretor Presidente (CEO), CISO Corporativo, Diretor Jurídico / DPO e Assessor Chefe de Comunicação.',
+        'Canal de voz criptografado dedicado (out-of-band), sala de guerra física isolada e e-mails de contingência.',
+        'Critérios BACEN: (1) Indisponibilidade de serviços essenciais (PIX, TED, SPB) > 2h; (2) Exfiltração de dados protegidos por sigilo bancário; (3) Fraudes cibernéticas relevantes ou contaminação sistêmica.',
+        'Notificação compulsória em até 24 horas via módulo de Risco Operacional no Sisbacen / Protocolo Digital BACEN com relatório preliminar.',
         '2026-02-15',
         '2.4'
+    ),
+    (
+        2,
+        'Camila Ramos',
+        'csirt@torrascd.com.br',
+        '(11) 99888-7766 (Plantão 24x7)',
+        'Líder CSIRT (Camila Ramos), Especialista SecOps (Felipe Albuquerque), Engenheiro Cloud e Advogada Especialista em LGPD.',
+        'Diretor Estatutário (Sílvio Cavalcanti), Gerente de Riscos, Gerente de TI e Consultoria Jurídica Externa.',
+        'Grupo corporativo fechado com criptografia ponto a ponto e linha telefônica redundante de emergência.',
+        'Critérios BACEN: Indisponibilidade de emissão de crédito/Pix > 2h ou vazamento cadastral sensível de mutuários.',
+        'Comunicação em até 24h via Sisbacen acompanhada de relatório preliminar e plano de contenção.',
+        '2026-01-20',
+        '1.8'
     );
     """)
 
-    # 6. MÓDULO PARI: Playbooks Operacionais (Art. 6º)
+    # 6. MÓDULO PARI: Playbooks Operacionais (Inst 1 e Inst 2)
     playbooks = [
+        # Inst 1
         (
             1, 'PB-01', 'Ataque de Ransomware e Sequestro de Ativos', 'Ransomware',
-            'Identificação de telemetria anômala no EDR (criptografia em massa de arquivos, chamadas vssadmin delete shadows). Alertas imediatos no SOC com nível P1.',
-            'Isolamento imediato de rede das máquinas afetadas via console EDR; desconexão de túneis VPN e bloqueio de portas SMB nas VLANs corporativas.',
-            'Identificação do vetor inicial (phishing, RDP exposto); quarentena de contas de serviço comprometidas; revogação de tokens de autenticação.',
-            'Validação de integridade dos backups imutáveis; restauração de servidores a partir de repositório seguro WORM; revalidação de regras de firewall.',
+            'Identificação de telemetria anômala no EDR (criptografia em massa de arquivos, chamadas vssadmin). Alertas imediatos no SOC nível P1.',
+            'Isolamento imediato de rede das máquinas afetadas via console EDR; desconexão de túneis VPN e bloqueio de portas SMB nas VLANs.',
+            'Identificação do vetor inicial (phishing, RDP exposto); quarentena de contas comprometidas; revogação de tokens de autenticação.',
+            'Validação de integridade dos backups imutáveis; restauração de servidores a partir de repositório WORM; revalidação de regras de firewall.',
             'Se houver indisponibilidade superior a 2 horas ou vazamento de dados, acionamento do Diretor Estatutário para comunicação imediata no SISBACEN.',
             'Contenção em até 15 minutos; Restauração completa em até 4 horas (RTO).'
         ),
         (
             1, 'PB-02', 'Vazamento ou Exfiltração de Dados Bancários e Pessoais (LGPD)', 'Vazamento de Dados',
-            'Disparo de alertas de DLP corporativo indicando transferência volumosa atípica de dados sigilosos; alertas da plataforma de Threat Intelligence de dados à venda na Dark Web.',
+            'Disparo de alertas de DLP corporativo indicando transferência volumosa atípica de dados sigilosos; alertas de Threat Intelligence na Dark Web.',
             'Revogação imediata de credenciais de acesso do usuário/serviço suspeito; bloqueio de IPs de destino e encerramento forçado de sessões ativas.',
-            'Análise forense das trilhas de auditoria e logs do SIEM para determinar o escopo exato dos dados acessados e identificar a falha de autorização.',
-            'Correção e fechamento da brecha técnica ou vulnerabilidade de API explorada; reemissão forçada de senhas e credenciais afetadas.',
-            'Notificação simultânea ao Banco Central do Brasil (SISBACEN) e à Autoridade Nacional de Proteção de Dados (ANPD) em até 24h úteis.',
+            'Análise forense das trilhas de auditoria e logs do SIEM para determinar o escopo exato dos dados acessados.',
+            'Correção e fechamento da brecha técnica ou vulnerabilidade de API explorada; reemissão forçada de senhas.',
+            'Notificação simultânea ao Banco Central do Brasil (SISBACEN) e à ANPD em até 24h úteis.',
             'Identificação do escopo em 2 horas; Parecer executivo preliminar em 12 horas.'
         ),
         (
             1, 'PB-03', 'Ataque de Negação de Serviço Distribuída (DDoS) no PIX e Internet Banking', 'DDoS',
-            'Monitoramento de saturação de banda e aumento exponencial de requisições HTTP/SYN flood na borda da rede; degradação de latência do PIX.',
-            'Ativação imediata de proteção de mitigação DDoS em nuvem (Cloudflare Magic Transit / AWS Shield Advanced); redirecionamento de DNS e desafio de mitigação.',
-            'Análise das assinaturas do tráfego malicioso e criação de regras de rate limiting e bloqueio geográfico de tráfego de origem anômala no WAF.',
-            'Rebalanceamento de carga e retorno gradual do tráfego corporativo limpo; monitoramento contínuo de estabilidade das transações PIX.',
-            'Comunicação ao Departamento de Operações Bancárias e de Sistema de Pagamentos (Deban/BACEN) se houver oscilação de conectividade no canal do PIX.',
+            'Monitoramento de saturação de banda e aumento exponencial de requisições HTTP/SYN flood na borda da rede.',
+            'Ativação imediata de proteção de mitigação DDoS em nuvem; redirecionamento de DNS e desafio de mitigação.',
+            'Análise das assinaturas do tráfego malicioso e criação de regras de rate limiting e bloqueio geográfico no WAF.',
+            'Rebalanceamento de carga e retorno gradual do tráfego limpo; monitoramento contínuo de estabilidade das transações PIX.',
+            'Comunicação ao Deban/BACEN se houver oscilação de conectividade no canal do PIX.',
             'Ativação de mitigação em menos de 5 minutos; Estabilização em até 20 minutos.'
         ),
         (
             1, 'PB-04', 'Indisponibilidade ou Falha em Nuvem Crítica (Failover & DR)', 'Nuvem',
-            'Alerta automático do sistema de observabilidade apontando interrupção total na região primária da AWS (us-east-1 ou sa-east-1).',
+            'Alerta automático do sistema de observabilidade apontando interrupção total na região primária da AWS.',
             'Acionamento do procedimento de Disaster Recovery (DR); congelamento de transações em trânsito no banco primário.',
-            'Chaveamento de tráfego (failover DNS via Route 53) para a região secundária na Microsoft Azure / AWS sa-east-1.',
-            'Restauração das esteiras de microsserviços na região de contingência; checagem de consistência de saldos e mensageria.',
-            'Notificação formal ao BACEN sobre acionamento de contingência em nuvem conforme previsto no plano de continuidade do Art. 19.',
+            'Chaveamento de tráfego (failover DNS via Route 53) para a região secundária na Microsoft Azure.',
+            'Restauração das esteiras de microsserviços na região de contingência; checagem de consistência de saldos.',
+            'Notificação formal ao BACEN sobre acionamento de contingência em nuvem conforme previsto no Art. 19.',
             'RTO operacional de chaveamento: até 45 minutos; RPO de dados: até 15 minutos.'
         ),
         (
             1, 'PB-05', 'Indisponibilidade ou Falha de Conectividade na RSFN / SPB', 'RSFN',
-            'Perda de sincronismo no roteador principal da Rede do Sistema Financeiro Nacional (RSFN); falha no envio de mensagens de liquidação STR/PIX.',
+            'Perda de sincronismo no roteador principal da Rede do Sistema Financeiro Nacional (RSFN); falha no envio de mensagens STR/PIX.',
             'Chaveamento automático para o canal redundante e circuito secundário de telecomunicação da RSFN.',
             'Diagnóstico físico e lógico da interface serial/fibra com a operadora de telecomunicações credenciada.',
             'Reenvio seguro das mensagens pendentes com validação de certificados ICP-Brasil SPB e conferência de protocolo.',
-            'Contato imediato com o suporte operacional da RSFN / Banco Central do Brasil para sincronização dos lotes de pagamento.',
+            'Contato imediato com o suporte operacional da RSFN / Banco Central do Brasil para sincronização dos lotes.',
             'Chaveamento para canal redundante em até 2 minutos.'
+        ),
+        # Inst 2 (Torra SCD)
+        (
+            2, 'PB-SCD-01', 'Ataque de Ransomware em Ambiente de Microcrédito', 'Ransomware',
+            'Telemetria do EDR detecta atividade de criptografia em volumes EBS de microsserviços.',
+            'Isolamento imediato das instâncias afetadas via Security Group e desligamento forçado.',
+            'Identificação da chave de acesso vazada e revogação das credenciais IAM na AWS.',
+            'Restauração a partir de snapshots EBS imutáveis com retenção garantida.',
+            'Comunicação ao Diretor Estatutário para envio de notificação no Sisbacen se houver impacto operacional.',
+            'Contenção em 20 minutos; Recuperação em até 2 horas.'
+        ),
+        (
+            2, 'PB-SCD-02', 'Indisponibilidade na Liquidação de Recebíveis PIX', 'Indisponibilidade',
+            'Falha de webhook e timeouts sucessivos com o Participante Direto liquidante do arranjo Pix.',
+            'Acionamento da fila de contingência assíncrona para reprocessamento das ordens de crédito.',
+            'Contato imediato com o NOC do banco liquidante para chaveamento de rota.',
+            'Reprocessamento ordenado das transações pendentes após reativação do canal.',
+            'Registro interno de incidente operacional e envio de relatório se a indisponibilidade ultrapassar 2 horas.',
+            'Comutação de fila em 5 minutos; Sincronização em até 30 minutos.'
+        ),
+        (
+            2, 'PB-SCD-03', 'Exposição de Credenciais de API de Parceiros Financeiros', 'Vazamento de Dados',
+            'Detecção de credencial de API exposta publicamente ou alerta de monitoramento externo.',
+            'Revogação imediata da API Key no API Gateway da AWS e invalidação de refresh tokens ativos.',
+            'Auditoria de chamadas nos logs do CloudTrail para verificar uso indevido das chaves expostas.',
+            'Geração e entrega de nova chave ao parceiro por canal seguro com autenticação de duplo fator.',
+            'Notificação de segurança ao parceiro e avaliação de reporte regulatório ao BACEN.',
+            'Revogação da chave em menos de 10 minutos.'
+        ),
+        (
+            2, 'PB-SCD-04', 'Tentativa de Engenharia Social contra Operadores de Crédito', 'Engenharia Social',
+            'Relato de colaborador de tentativa de spear phishing via WhatsApp corporativo solicitando liberação de limite.',
+            'Bloqueio preventivo do usuário alvo e suspensão de alçadas de aprovação temporariamente.',
+            'Verificação de ausência de acessos indevidos e validação de autenticidade dos dados bancários.',
+            'Desbloqueio de acesso após confirmação biométrica e emissão de alerta interno de conscientização.',
+            'Registro na base de incidentes preventivos do CSIRT.',
+            'Bloqueio em até 10 minutos; Investigação preliminar em 1 hora.'
         )
     ]
 
@@ -539,11 +650,12 @@ def seed():
 
     # 7. MÓDULO PARI: Exercícios e Simulados de Crise (Tabletop Drills)
     simulados = [
+        # Inst 1
         (
             1,
             'Simulado de Mesa 2025: Cenário de Ransomware com Tentativa de Dupla Extorsão',
             '2025-11-20',
-            'Simulação de infecção por ransomware atingindo servidores de arquivos e tentativa de exfiltração de dados cadastrais de clientes, com teste de tomada de decisão da Diretoria.',
+            'Simulação de infecção por ransomware atingindo servidores de arquivos e tentativa de exfiltração de dados cadastrais, com teste de tomada de decisão da Diretoria.',
             'Diretor Estatutário de Cibersegurança, CISO, Líder CSIRT, Diretora Jurídica, Encarregada DPO, Gerente de Comunicação e Especialistas de Infraestrutura.',
             'Tempo de ativação do comitê de crise: 22 minutos; Decisão de contenção: 35 minutos.',
             'Excelente coordenação entre as áreas técnica e jurídica; clareza na aplicação dos critérios de não pagamento de resgate e acionamento de backups imutáveis.',
@@ -562,6 +674,19 @@ def seed():
             'Pequena latência temporária de sincronismo na fila de mensageria de contingência.',
             'Ajuste das variáveis de alocação de capacidade sob demanda na região secundária.',
             'Concluido'
+        ),
+        # Inst 2
+        (
+            2,
+            'Simulado de Continuidade: Indisponibilidade de Nuvem e Failover Multi-Region',
+            '2025-11-05',
+            'Simulação de degradação massiva na zona de disponibilidade AWS sa-east-1a com chaveamento para sa-east-1b e sa-east-1c.',
+            'Diretor Sílvio Cavalcanti, Camila Ramos (CSIRT), Felipe Albuquerque (SecOps) e Engenheiro de Dados.',
+            'Tempo total de chaveamento de esteira: 28 minutos.',
+            'Mecanismos de auto-scaling responderam com eficácia e réplica de leitura do RDS assumiu como master sem perda de registros.',
+            'Necessidade de documentar passo a passo simplificado para acionamento noturno por operador de plantão.',
+            'Criação de playbook interativo no Runbook corporativo e automação de alertas no Slack de emergência.',
+            'Concluido'
         )
     ]
 
@@ -575,8 +700,9 @@ def seed():
 
     conn.commit()
 
-    # 8. Evidências Iniciais
+    # 8. Evidências Iniciais (Inst 1 e Inst 2)
     evidencias = [
+        # Inst 1
         (
             1, req_map['REQ-01'],
             'Política Corporativa de Segurança Cibernética v3.2',
@@ -609,6 +735,17 @@ def seed():
             'c2755e100f8981f964095a8286a117b355d0124355ddccb7cf4cb7f0d0698160',
             892300, 'application/pdf', None,
             'Equipe de IAM', '2026-02-18', 'Validada'
+        ),
+        (
+            1, req_map['REQ-5274-11'],
+            'Inventário e Gestão de Certificados Digitais ICP-Brasil / TLS 1.3',
+            'Documento',
+            'Relatório de inventário dos certificados digitais em uso na RSFN e borda de rede, com datas de renovação e custódia em HSM.',
+            'Inventario_Certificados_2026.pdf',
+            '/uploads/Inventario_Certificados_2026.pdf',
+            'd9a4b882310b892341908bdeac417120349812bcadaef4172839217823901bca',
+            640200, 'application/pdf', None,
+            'Infraestrutura Cloud', '2026-02-01', 'Validada'
         ),
         (
             1, req_map['REQ-PARI-01'],
@@ -653,6 +790,62 @@ def seed():
             '9b74c9897bac770ffc029102a200c5deac54f2c5fa5b516810743f58d93d4a9e',
             2890000, 'application/pdf', None,
             'Diretor Estatutário CISO', '2026-02-15', 'Validada'
+        ),
+        # Inst 2 (Torra SCD)
+        (
+            2, req_map['REQ-01'],
+            'Política de Segurança Cibernética Torra SCD v2.1',
+            'Politica',
+            'Política aprovada pela Diretoria da Sociedade de Crédito Direto aderente às resoluções CMN 4.893 e 5.274.',
+            'Politica_Torra_SCD_v2.1.pdf',
+            '/uploads/Politica_Torra_SCD_v2.1.pdf',
+            '33a1e2f491c981248019bca88921dfa0194821049281a1829481928419284102',
+            980400, 'application/pdf', None,
+            'Camila Ramos', '2026-01-20', 'Validada'
+        ),
+        (
+            2, req_map['REQ-02'],
+            'Homologação UNICAD Diretor Art. 7º - Torra SCD',
+            'Ata de Diretoria',
+            'Certidão de homologação do Diretor Sílvio Cavalcanti emitida pelo Banco Central do Brasil.',
+            'Certidao_UNICAD_Silvio_Cavalcanti.pdf',
+            '/uploads/Certidao_UNICAD_Silvio_Cavalcanti.pdf',
+            '44b2f3a582d092359120cdb99032efb1205932150392b2930592039520395213',
+            412000, 'application/pdf', None,
+            'Jurídico Torra', '2025-06-15', 'Validada'
+        ),
+        (
+            2, req_map['REQ-5274-11'],
+            'Inventário de Certificados e TLS 1.3 - Torra SCD',
+            'Documento',
+            'Inventário dos certificados SSL de APIs públicas e credenciais mTLS homologadas no SPI/Pix.',
+            'Inventario_TLS_Pix_Torra.pdf',
+            '/uploads/Inventario_TLS_Pix_Torra.pdf',
+            '55c3a4b693e103460231dec00143fac2316043261403c3041603140631406324',
+            510000, 'application/pdf', None,
+            'Felipe Albuquerque', '2026-01-18', 'Validada'
+        ),
+        (
+            2, req_map['REQ-TEST-01'],
+            'Relatório Executivo de Pentest em API de Microcrédito',
+            'Relatório Pentest',
+            'Laudo técnico de testes de invasão e intrusão na esteira de concessão de crédito digital.',
+            'Pentest_API_Credito_2025.pdf',
+            '/uploads/Pentest_API_Credito_2025.pdf',
+            '66d4b5c704f214571342efd11254abd3427154372514d4152714251742517435',
+            1850000, 'application/pdf', None,
+            'Auditoria Externa TI', '2025-09-30', 'Validada'
+        ),
+        (
+            2, req_map['REQ-CLOUD-04'],
+            'Termo Aditivo de Cláusulas BACEN Art. 17 - AWS Brasil',
+            'Contrato Cloud',
+            'Aditivo contratual de processamento de dados contendo salvaguardas de auditoria BACEN e sigilo bancário.',
+            'Aditivo_Art17_AWS_Torra.pdf',
+            '/uploads/Aditivo_Art17_AWS_Torra.pdf',
+            '77e5c6d8150325682453fae22365bce4538265483625e5263825362853628546',
+            730000, 'application/pdf', None,
+            'Jurídico Torra', '2025-08-10', 'Validada'
         )
     ]
 
@@ -666,8 +859,9 @@ def seed():
 
     conn.commit()
 
-    # 9. Planos de Ação (5W2H)
+    # 9. Planos de Ação (5W2H) (Inst 1 e Inst 2)
     planos = [
+        # Inst 1
         (
             1, req_map['REQ-5274-04'],
             'Expansão da Proteção DLP para Repositórios Git e Ferramentas SaaS',
@@ -682,7 +876,7 @@ def seed():
         (
             1, req_map['REQ-5274-11'],
             'Automação Integral do Ciclo de Vida de Certificados Digitais',
-            'Substituir processos manuais de renovação de certificados por pipeline automatizado com Let''s Encrypt / DigiCert via Cert-Manager.',
+            'Substituir processos manuais de renovação de certificados por pipeline automatizado com Cert-Manager.',
             'Eliminar risco de expiração inesperada de certificados SSL/mTLS de APIs e serviços do Open Finance.',
             'Clusters Kubernetes EKS e Load Balancers',
             'Juliana Ramos (Cloud SRE)',
@@ -704,13 +898,47 @@ def seed():
         (
             1, req_map['REQ-CONT-02'],
             'Elaboração de Procedimento de Migração e Saída do SaaS CRM',
-            'Mapear e documentar a rotina técnica de extração integral e reversibilidade dos dados de clientes hospedados no CRM em nuvem.',
+            'Mapear e documentar a rotina técnica de extração integral e reversibilidade dos dados de clientes hospedados no CRM.',
             'Atender ao Artigo 20 da Resolução CMN nº 4.893 (plano de descontinuidade com garantia de portabilidade total).',
             'Ambiente Corporativo de Relacionamento',
             'Rodrigo Prado (Arquiteto Corporativo)',
             '2026-04-30',
-            'Construir script de exportação diária via API para data lake corporativo no formato Parquet aberto e testar carga em base independente.',
+            'Construir script de exportação diária via API para data lake corporativo no formato Parquet aberto e testar carga.',
             35000.0, 'Em_Andamento', 35, None
+        ),
+        # Inst 2 (Torra SCD)
+        (
+            2, req_map['REQ-5274-04'],
+            'Configuração de Políticas DLP para Google Workspace da Torra SCD',
+            'Ativar regras de inspeção de conteúdo para bloquear envio de CPF e dados de crédito para fora do domínio.',
+            'Proteger o sigilo bancário e prevenir exfiltração de base de mutuários.',
+            'Ambiente Google Workspace corporativo',
+            'Camila Ramos',
+            '2026-05-15',
+            'Habilitar regras de DLP com quarentena automática de mensagens.',
+            15000.0, 'Em_Andamento', 55, None
+        ),
+        (
+            2, req_map['REQ-5274-12'],
+            'Contratação de Feed de Threat Intelligence para Fraudes em Crédito',
+            'Contratar feed especializado em monitoramento de fraude e vazamento de CPFs.',
+            'Atendimento integral à Resolução CMN 5.274/2025 para instituições de crédito direto.',
+            'SOC Terceirizado',
+            'Diretor Sílvio Cavalcanti',
+            '2026-05-30',
+            'Aprovar proposta comercial com provedor setorial.',
+            40000.0, 'Em_Andamento', 30, None
+        ),
+        (
+            2, req_map['REQ-CONT-02'],
+            'Plano de Saída e Reversibilidade da Nuvem AWS para SCD',
+            'Documentar procedimentos de exportação dos bancos de crédito e imagens de contêiner para formato neutro.',
+            'Cumprimento do Art. 20 da Res. CMN 4.893 para garantia de reversibilidade contratual.',
+            'Infraestrutura Torra',
+            'Felipe Albuquerque',
+            '2026-05-30',
+            'Construir rotina automatizada de dump lógico e armazenamento em cold storage off-cloud.',
+            20000.0, 'Em_Andamento', 45, None
         )
     ]
 
@@ -724,8 +952,9 @@ def seed():
 
     conn.commit()
 
-    # 10. Fornecedores de Nuvem
+    # 10. Fornecedores de Nuvem (Inst 1 e Inst 2)
     fornecedores = [
+        # Inst 1
         (
             1, 'Amazon Web Services (AWS)',
             'Hospedagem de infraestrutura core banking, microsserviços, data lake e bancos de dados relacionais',
@@ -749,6 +978,23 @@ def seed():
             1, 1, '2023-09-10', 1, 1, 1, 1, 0,
             '2025-08-10', 'Medio',
             'Plano de reversibilidade/saída em fase de detalhamento técnico para total aderência ao Art. 20.'
+        ),
+        # Inst 2 (Torra SCD)
+        (
+            2, 'Amazon Web Services Brasil Ltda',
+            'Serviços de computação elástica ECS/Fargate, banco RDS Aurora Postgres e S3',
+            'IaaS', 'Brasil (São Paulo sa-east-1)',
+            1, 1, '2024-05-10', 1, 1, 1, 1, 1,
+            '2025-11-05', 'Baixo',
+            'Notificação de contratação relevante homologada no BACEN. Cláusulas do Art. 17 atendidas.'
+        ),
+        (
+            2, 'Datadog Inc.',
+            'Plataforma SaaS de observabilidade, APM, Cloud SIEM e monitoramento de logs de segurança',
+            'SaaS', 'Estados Unidos (us-east-1)',
+            1, 1, '2024-07-22', 1, 1, 1, 1, 1,
+            '2025-09-18', 'Baixo',
+            'Logs encriptados antes do envio com chave custodiada na Torra SCD. Convênio BACEN verificado.'
         )
     ]
 
@@ -764,12 +1010,14 @@ def seed():
 
     conn.commit()
 
-    # 11. Incidentes
+    # 11. Incidentes Reais com MTTD e MTTR (Inst 1 e Inst 2)
     incidentes = [
+        # Inst 1
         (
             1, 'INC-2025-0042',
             'Tentativa de Credential Stuffing em API de Autenticação Móvel',
-            '2025-09-14 03:22:00', '2025-09-14 03:24:15',
+            '2025-09-14 03:22:00', '2025-09-14 03:24:15', '2025-09-14 03:45:00',
+            2, 21,
             'Intrusão', 'Média', 'API Gateway Móvel',
             'Nenhuma conta comprometida. Bloqueio automático de 1.450 IPs maliciosos pelo WAF e rate-limiting.',
             'Encerrado', 0, None,
@@ -779,7 +1027,8 @@ def seed():
         (
             1, 'INC-2025-0089',
             'E-mail de Phishing Temático Simulando Comunicado de RH com Link Malicioso',
-            '2025-11-03 10:15:00', '2025-11-03 10:18:30',
+            '2025-11-03 10:15:00', '2025-11-03 10:18:30', '2025-11-03 10:45:00',
+            3, 27,
             'Phishing', 'Baixa', 'Serviço de Correio Eletrônico Corporativo',
             'Mensagem capturada pelo filtro anti-phishing. Três colaboradores clicaram, mas o sandbox bloqueou a execução da macro.',
             'Encerrado', 0, None,
@@ -789,43 +1038,159 @@ def seed():
         (
             1, 'INC-2026-0005',
             'Indisponibilidade Momentânea em Conector Secundário da RSFN durante Manutenção',
-            '2026-01-22 01:10:00', '2026-01-22 01:11:00',
+            '2026-01-22 01:10:00', '2026-01-22 01:11:00', '2026-01-22 01:25:00',
+            1, 14,
             'Indisponibilidade', 'Baixa', 'Roteador RSFN 02 (Secundário)',
             'Sem impacto nas operações ou transferências PIX, pois o conector primário absorveu o tráfego de imediato.',
             'Encerrado', 0, None,
             'Falha em placa de rede durante atualização programada de firmware.',
             'Substituição da placa defeituosa e rehomologação dos testes de chaveamento redundante.'
+        ),
+        # Inst 2 (Torra SCD)
+        (
+            2, 'INC-2025-0101',
+            'Tentativa de Escalação de Privilégios em Bastion Host',
+            '2025-10-12 14:40:00', '2025-10-12 14:48:00', '2025-10-12 15:30:00',
+            8, 42,
+            'Intrusão', 'Média', 'Servidor Bastion de Gerência Cloud',
+            'Nenhum acesso indevido consumado aos bancos produtivos. Usuário desconhecido bloqueado de imediato pelo EDR.',
+            'Encerrado', 0, None,
+            'Tentativa de exploração de vulnerabilidade conhecida em pacote utilitário de terminal.',
+            'Remoção do pacote, atualização do baseline de hardening e restrição de acesso SSH via VPN corporativa.'
+        ),
+        (
+            2, 'INC-2025-0145',
+            'Falha de Sincronismo em Webhook de Liquidação Pix',
+            '2025-12-05 10:50:00', '2025-12-05 10:54:00', '2025-12-05 11:15:00',
+            4, 21,
+            'Indisponibilidade', 'Baixa', 'Webhook Receiver de Liquidação',
+            'Atraso temporário de 15 minutos na confirmação de 14 propostas de crédito. Todas as transações foram liquidadas com sucesso.',
+            'Encerrado', 0, None,
+            'Oscilação temporária de DNS do parceiro liquidante.',
+            'Implementação de cache DNS local com TTL estendido e fila de retry com backoff exponencial.'
         )
     ]
 
     for inc in incidentes:
         cursor.execute("""
         INSERT INTO incidentes (
-            instituicao_id, protocolo, titulo, data_ocorrencia, data_deteccao, categoria, criticidade,
+            instituicao_id, protocolo, titulo, data_ocorrencia, data_deteccao, data_resolucao,
+            tempo_deteccao_minutos, tempo_resolucao_minutos, categoria, criticidade,
             sistemas_afetados, impacto_operacional, status, notificado_bacen, data_notificacao_bacen,
             causa_raiz, acoes_corretivas
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """, inc)
 
     conn.commit()
 
-    # 12. Trilha de Auditoria
+    # 12. Fragilidades Identificadas e Auditorias / Pentests (Art. 8º - Seção 5)
+    fragilidades = [
+        # Inst 1
+        (
+            1, 'Pentest Externo Periódico 2025 - Headers de Segurança HTTP',
+            'Pentest Externo', 'Media',
+            'Ausência de cabeçalho Strict-Transport-Security (HSTS) e Content-Security-Policy (CSP) em subdomínio de teste exposto.',
+            req_map['REQ-TEST-01'], 'Remediada', '2025-10-30', '2025-11-20', 'SecOps Lead'
+        ),
+        (
+            1, 'Auditoria Interna de Acessos Privilegiados - Contas de Serviço',
+            'Auditoria Interna', 'Alta',
+            'Contas de serviço em ambiente de homologação com credenciais antigas sem processo automatizado de rotação semestral.',
+            req_map['REQ-5274-01'], 'Em_Tratamento', '2025-12-10', '2026-03-31', 'Equipe de IAM'
+        ),
+        # Inst 2
+        (
+            2, 'Pentest em API de Microcrédito - Rate Limiting em Endpoint de Simulação',
+            'Pentest Externo', 'Media',
+            'Falta de rate-limiting estrito em rota pública de simulação cadastral, permitindo requisições automatizadas atípicas.',
+            req_map['REQ-TEST-01'], 'Remediada', '2025-09-30', '2025-11-15', 'Felipe Albuquerque'
+        ),
+        (
+            2, 'Varredura Semestral de Vulnerabilidades - Versão de OpenSSH em Servidor de Staging',
+            'Varredura de Vulnerabilidades', 'Baixa',
+            'Versão de OpenSSH desatualizada em máquina virtual isolada de laboratório de desenvolvimento.',
+            req_map['REQ-5274-08'], 'Remediada', '2025-11-10', '2025-11-25', 'DevSecOps Torra'
+        )
+    ]
+
+    for f in fragilidades:
+        cursor.execute("""
+        INSERT INTO auditorias_fragilidades (
+            instituicao_id, titulo, tipo, severidade, descricao, requisito_id,
+            status_remediacao, data_identificacao, prazo_remediacao, responsavel
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, f)
+
+    conn.commit()
+
+    # 13. Parecer Formal do Diretor Estatutário (Art. 8º - Seção 7)
+    # Pré-cria parecer assinado para Inst 1 e parecer pendente para Inst 2
+    parecer_texto_1 = (
+        "Na qualidade de Diretor Estatutário formalmente indicado perante o Banco Central do Brasil nos termos "
+        "do Art. 7º da Resolução CMN nº 4.893/2021, declaro que analisei a efetividade da implementação da "
+        "Política de Segurança Cibernética e do Plano de Ação e de Resposta a Incidentes (PARI) da Instituição "
+        "Financeira Alpha S.A. durante o exercício encerrado em 31 de dezembro de 2025. "
+        "Atesto que os controles mandatórios prescritos pela novel Resolução CMN nº 5.274/2025 encontram-se em elevado grau "
+        "de aderência e maturidade operacional (91.2%), com planos de ação corretiva formalizados para as oportunidades "
+        "de melhoria remanescentes. Os simulados de crise e testes de intrusão independentes atestaram a resiliência "
+        "operacional dos sistemas críticos perante o ecossistema do Sistema Financeiro Nacional (SFN)."
+    )
+    hash_inst1 = hashlib.sha256(f"AlphaBank_2025_{parecer_texto_1}".encode('utf-8')).hexdigest()
+
+    pareceres = [
+        (
+            1, '2025', parecer_texto_1, 'Assinado_Digitalmente',
+            'Roberto Silveira Mello',
+            'Diretor Estatutário de Riscos e Segurança Cibernética (Art. 7º BACEN)',
+            'BACEN-UNICAD-9821',
+            '2026-02-18 14:00:00',
+            hash_inst1
+        ),
+        (
+            2, '2025',
+            "Na qualidade de Diretor responsável pela segurança cibernética da Torra SCD perante o BACEN (Art. 7º), "
+            "atesto que os controles de cibersegurança foram avaliados com efetividade para o segmento S4, mantendo-se "
+            "as rotinas de contingência e salvaguardas contratuais do Art. 17 em estrita conformidade.",
+            'Pendente',
+            'Sílvio Cavalcanti',
+            'Diretor de Cibersegurança e Operações (Art. 7º BACEN)',
+            'BACEN-UNICAD-4512',
+            None,
+            None
+        )
+    ]
+
+    for p in pareceres:
+        cursor.execute("""
+        INSERT INTO relatorio_anual_parecer (
+            instituicao_id, ano_base, parecer_conclusivo, status_assinatura, assinado_por,
+            cargo_assinante, unicad_assinante, data_assinatura, hash_sha256_relatorio
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, p)
+
+    conn.commit()
+
+    # 14. Trilha de Auditoria (Audit Log) Segregada por Tenant
     audit_logs = [
-        ('2026-02-15 09:30:00', 'auditoria.grc', 'SISTEMA_INICIALIZADO', 'instituicao', 1, 'Sistema GRC carregado com sucesso para a instituição configurada.'),
-        ('2026-02-15 10:15:00', 'auditor.ciso', 'AUDITAR_REQUISITO', 'avaliacoes', req_map['REQ-5274-01'], 'Avaliação do controle 01 da Resolução CMN 5.274 confirmada como Atendido (MFA).'),
-        ('2026-02-15 11:20:00', 'csirt.lead', 'REVISAR_PARI', 'pari_governanca', 1, 'Revisão das rotinas do PARI e playbooks operacionais de resposta a incidentes.'),
-        ('2026-02-18 14:00:00', 'diretor.estatutario', 'EMITIR_RELATORIO', 'instituicao', 1, 'Geração do Relatório Anual do Art. 8º da Resolução CMN 4.893 (data-base 31/12/2025).')
+        # Inst 1
+        (1, '2026-02-15 09:30:00', 'admin@bacen.local', 'SISTEMA_INICIALIZADO', 'instituicao', 1, 'Plataforma GRC carregada com governança Alpha Bank (S3).'),
+        (1, '2026-02-15 10:15:00', 'gestor@alphabank.com.br', 'AUDITAR_REQUISITO', 'avaliacoes', req_map['REQ-5274-01'], 'Avaliação do controle 01 da Resolução CMN 5.274 confirmada como Atendido (MFA).'),
+        (1, '2026-02-15 11:20:00', 'gestor@alphabank.com.br', 'REVISAR_PARI', 'pari_governanca', 1, 'Revisão das rotinas do PARI e playbooks operacionais concluída.'),
+        (1, '2026-02-18 14:00:00', 'gestor@alphabank.com.br', 'ASSINATURA_PARECER_ART8', 'relatorio_anual_parecer', 1, f"Parecer formal emitido e assinado digitalmente com hash SHA-256 {hash_inst1[:16]}..."),
+        # Inst 2
+        (2, '2026-01-20 08:45:00', 'admin@bacen.local', 'SISTEMA_INICIALIZADO', 'instituicao', 2, 'Ambiente multi-tenant provisionado para Torra SCD (S4).'),
+        (2, '2026-01-20 14:30:00', 'gestor@torrascd.com.br', 'AUDITAR_REQUISITO', 'avaliacoes', req_map['REQ-01'], 'Política de Segurança Cibernética Torra v2.1 homologada como Atendida.')
     ]
 
     for log in audit_logs:
         cursor.execute("""
-        INSERT INTO auditoria_log (data_hora, usuario, acao, entidade, entidade_id, detalhes)
-        VALUES (?, ?, ?, ?, ?, ?);
+        INSERT INTO auditoria_log (instituicao_id, data_hora, usuario, acao, entidade, entidade_id, detalhes)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
         """, log)
 
     conn.commit()
     conn.close()
-    print("Seed data loaded successfully with PARI and institution support!")
+    print("Seed data loaded successfully with multi-tenant isolation, PARI, Pentests and Art. 8 module!")
 
 if __name__ == "__main__":
     seed()

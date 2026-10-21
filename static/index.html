@@ -1214,6 +1214,369 @@
       from { transform: translateY(20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+  
+    /* ========================================================= */
+    /* MULTI-TENANT CONTEXT SELECTOR & PERSISTENT COMPANY BANNER */
+    /* ========================================================= */
+    .company-selector-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .company-selector-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .company-selector-btn:hover {
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+    }
+    .company-selector-icon {
+      color: var(--brand-primary);
+      display: flex;
+      align-items: center;
+    }
+    .company-selector-text {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      max-width: 290px;
+    }
+    .company-selector-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      color: #64748b;
+      line-height: 1;
+    }
+    .company-selector-current {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .company-segmento-badge {
+      background: #0284c7;
+      color: #ffffff;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .company-selector-arrow {
+      color: #64748b;
+      transition: transform 0.2s;
+    }
+    .company-dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 6px;
+      width: 400px;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      overflow: hidden;
+    }
+    .company-dropdown-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      background: #f8fafc;
+    }
+    .company-dropdown-search svg {
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+    .company-dropdown-search input {
+      border: none;
+      background: transparent;
+      outline: none;
+      width: 100%;
+      font-size: 12.5px;
+      font-family: inherit;
+      color: var(--text-main);
+    }
+    .company-dropdown-list {
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .company-dropdown-item {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .company-dropdown-item:last-child {
+      border-bottom: none;
+    }
+    .company-dropdown-item:hover {
+      background: #f8fafc;
+    }
+    .company-dropdown-item.active {
+      background: #f0fdf4;
+      border-left: 3px solid var(--color-success);
+    }
+    .cd-item-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .cd-item-meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .company-dropdown-footer {
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* PERSISTENT COMPANY BANNER AT TOP OF ALL PAGES */
+    .persistent-company-indicator {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border-color);
+      border-left: 4px solid var(--brand-primary);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+      position: sticky;
+      top: 64px;
+      z-index: 9;
+    }
+    .pci-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .pci-bank-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: #e0f2fe;
+      color: #0284c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pci-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .pci-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pci-razao {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pci-segment-badge {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid #bae6fd;
+    }
+    .pci-tipo-badge {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .pci-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+      color: #64748b;
+      margin-top: 2px;
+      flex-wrap: wrap;
+    }
+    .pci-separator {
+      color: #cbd5e1;
+    }
+    .pci-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .pci-director-box {
+      text-align: right;
+    }
+    .pci-director-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+    .pci-director-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .pci-director-role {
+      font-size: 10.5px;
+      color: #0284c7;
+    }
+
+    /* EMPRESA TABS */
+    .empresa-tab-bar {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 18px;
+    }
+    .empresa-tab-btn {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .empresa-tab-btn:hover {
+      color: #0f172a;
+    }
+    .empresa-tab-btn.active {
+      color: var(--brand-primary);
+      border-bottom-color: var(--brand-primary);
+    }
+
+    /* RELATÓRIO ANUAL ART. 8º EXECUTIVE STYLES */
+    .report-section-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      margin-bottom: 22px;
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+    }
+    .report-section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .report-kpi-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .report-kpi-stat-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+    }
+    .report-kpi-stat-val {
+      font-size: 22px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--brand-primary);
+    }
+    .report-kpi-stat-lbl {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .digital-seal-box {
+      border: 2px solid #10b981;
+      background: #f0fdf4;
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .digital-seal-icon {
+      width: 44px;
+      height: 44px;
+      background: #10b981;
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .digital-seal-hash {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #047857;
+      background: #d1fae5;
+      padding: 4px 8px;
+      border-radius: 4px;
+      word-break: break-all;
+      margin-top: 6px;
+      display: inline-block;
+    }
+    @media print {
+      body { height: auto; overflow: visible; background: #fff; }
+      .app-sidebar, .app-topbar, .persistent-company-indicator, .no-print, button { display: none !important; }
+      .app-main { overflow: visible; }
+      .content-container { padding: 0 !important; }
+      .view-panel { display: none !important; }
+      #view-relatorio { display: block !important; }
+      .report-document { box-shadow: none; border: none; padding: 0; }
+      .report-section-card { box-shadow: none; border: 1px solid #e2e8f0; page-break-inside: avoid; }
+    }
+
   </style>
 </head>
 <body>
@@ -1302,12 +1665,33 @@
     <!-- Topbar -->
     <header class="app-topbar">
       <div class="topbar-left">
-        <div class="topbar-institution">
-          <div class="inst-title">
-            <span id="top-razao-social">Instituição em Avaliação</span>
-            <span class="inst-segmento" id="top-segmento">Segmento S3</span>
+        <!-- CompanyContextSelector Component Fixo no Header -->
+        <div class="company-selector-wrapper" id="company-context-selector-wrapper">
+          <div class="company-selector-btn" id="company-selector-btn" onclick="toggleCompanyDropdown(event)">
+            <div class="company-selector-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M5 6l7-3 7 3"/><path d="M4 10v11"/><path d="M20 10v11"/><path d="M8 14v4"/><path d="M12 14v4"/><path d="M16 14v4"/></svg>
+            </div>
+            <div class="company-selector-text">
+              <div class="company-selector-label">Instituição Ativa (Multi-Tenant)</div>
+              <div class="company-selector-current" id="top-company-current-name">Carregando instituição...</div>
+            </div>
+            <div class="company-segmento-badge" id="top-company-current-segmento">S3</div>
+            <svg class="company-selector-arrow" id="top-company-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-          <div class="inst-meta" id="top-cnpj-versao">CNPJ: 00.000.000/0001-00 • Política v1.0</div>
+          <div class="company-dropdown-menu" id="company-dropdown-menu" style="display:none;" onclick="event.stopPropagation()">
+            <div class="company-dropdown-search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="company-search-input" placeholder="Buscar por Razão Social, CNPJ ou Segmento..." oninput="filterCompanyDropdown(this.value)">
+            </div>
+            <div class="company-dropdown-list" id="company-dropdown-list">
+              <!-- Populado dinamicamente -->
+            </div>
+            <div class="company-dropdown-footer">
+              <button class="btn btn-sm btn-outline-primary" style="width:100%; justify-content:center;" onclick="openNewInstitutionModal(); toggleCompanyDropdown(event);">
+                + Cadastrar Nova Instituição
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="topbar-right">
@@ -1334,6 +1718,42 @@
       </div>
     </header>
 
+    <!-- Indicador Visual Persistente no Topo de Todas as Páginas (Multi-Tenant Banner) -->
+    <div id="persistent-company-banner" class="persistent-company-indicator">
+      <div class="pci-left">
+        <div class="pci-bank-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </div>
+        <div class="pci-info">
+          <div class="pci-name-row">
+            <span class="pci-razao" id="pci-razao-social">Instituição em Avaliação</span>
+            <span class="pci-segment-badge" id="pci-segmento">BACEN S3</span>
+            <span class="pci-tipo-badge" id="pci-tipo">Banco Múltiplo</span>
+          </div>
+          <div class="pci-meta-row">
+            <span><strong>CNPJ:</strong> <span id="pci-cnpj">00.000.000/0001-00</span></span>
+            <span class="pci-separator">•</span>
+            <span><strong>UNICAD:</strong> <span id="pci-unicad">BACEN-UNICAD</span></span>
+            <span class="pci-separator">•</span>
+            <span><strong>Política:</strong> <span id="pci-politica">v1.0 (Aprovada pelo Conselho)</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="pci-right">
+        <div class="pci-director-box">
+          <div class="pci-director-title">Diretor Estatutário (Art. 7º BACEN)</div>
+          <div class="pci-director-name" id="pci-director-name">Diretor Estatutário</div>
+          <div class="pci-director-role" id="pci-director-cargo">Diretor de Cibersegurança</div>
+        </div>
+        <div class="pci-context-switch">
+          <button class="btn btn-secondary btn-sm" onclick="switchView('empresa')" title="Gerenciar Perfil da Empresa">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Perfil & Multi-Empresas
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="content-container">
 
       <!-- Banner de Alerta para Perfil de Auditoria BACEN -->
@@ -1353,116 +1773,154 @@
           <div class="card-header">
             <div class="card-title">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-              Cadastro e Configuração da Instituição Financeira Avaliada
+              Gestão de Instituições Financeiras Avaliadas (Multi-Tenancy)
             </div>
             <div style="display:flex; gap:10px;">
-              <select id="select-instituicao-ativa" class="filter-select" onchange="switchActiveInstitution(this.value)">
-                <!-- populated -->
-              </select>
               <button class="btn btn-outline-primary btn-sm" onclick="openNewInstitutionModal()">+ Nova Empresa</button>
             </div>
           </div>
           <div class="card-body">
-            <p style="font-size:13px; color:#475569; margin-bottom:16px; line-height:1.5;">
-              Preencha com exatidão os dados da instituição financeira, enquadramento regulatório perante o Banco Central do Brasil e os dados do <strong>Diretor Estatutário formalmente indicado (Art. 7º da Resolução CMN nº 4.893/2021)</strong>. Todas as avaliações, evidências e relatórios oficiais serão parametrizados por este cadastro.
-            </p>
+            <!-- Tabs Bar -->
+            <div class="empresa-tab-bar">
+              <button class="empresa-tab-btn active" id="tab-btn-perfil" onclick="switchEmpresaTab('perfil')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Perfil da Empresa Ativa
+              </button>
+              <button class="empresa-tab-btn" id="tab-btn-multi" onclick="switchEmpresaTab('multi')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Gerenciador Multi-Empresas (BACEN / SFN)
+              </button>
+            </div>
 
-            <form id="form-empresa" onsubmit="saveCompanyData(event)">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Razão Social Completa</label>
-                  <input type="text" id="emp-razao-social" class="form-input" required placeholder="Ex: Banco Exemplo S.A. - Banco Múltiplo">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Nome Fantasia</label>
-                  <input type="text" id="emp-nome-fantasia" class="form-input" placeholder="Ex: Exemplo Bank">
-                </div>
-              </div>
+            <!-- Tab 1: Perfil da Empresa Ativa -->
+            <div id="empresa-pane-perfil">
+              <p style="font-size:13px; color:#475569; margin-bottom:16px; line-height:1.5;">
+                Preencha com exatidão os dados da instituição financeira atualmente selecionada, enquadramento regulatório perante o Banco Central do Brasil e os dados do <strong>Diretor Estatutário formalmente indicado (Art. 7º da Resolução CMN nº 4.893/2021)</strong>. Todas as avaliações, evidências e relatórios oficiais serão parametrizados por este cadastro.
+              </p>
 
-              <div class="form-row-3" style="margin-top:12px;">
-                <div class="form-group">
-                  <label class="form-label">CNPJ</label>
-                  <input type="text" id="emp-cnpj" class="form-input" required placeholder="00.000.000/0001-00">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Segmento BACEN (Res. CMN 4.553)</label>
-                  <select id="emp-segmento" class="form-select">
-                    <option value="S1">S1 - Porte igual ou superior a 10% do PIB / Sistêmico</option>
-                    <option value="S2">S2 - Porte entre 1% e 10% do PIB</option>
-                    <option value="S3" selected>S3 - Porte entre 0,1% e 1% do PIB</option>
-                    <option value="S4">S4 - Porte inferior a 0,1% do PIB</option>
-                    <option value="S5">S5 - Não aplicável metodologia simplificada / Cooperativas</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Tipo de Instituição</label>
-                  <select id="emp-tipo" class="form-select">
-                    <option value="Banco Múltiplo">Banco Múltiplo</option>
-                    <option value="Banco Comercial">Banco Comercial</option>
-                    <option value="Banco de Investimento">Banco de Investimento</option>
-                    <option value="Cooperativa de Crédito">Cooperativa de Crédito</option>
-                    <option value="Sociedade de Crédito Direto (SCD)">Sociedade de Crédito Direto (SCD)</option>
-                    <option value="Instituição de Pagamento (IP)">Instituição de Pagamento (IP)</option>
-                    <option value="Outra Instituição Autorizada">Outra Instituição Autorizada</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:16px; margin-top:16px;">
-                <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">
-                  Diretor Estatutário Responsável perante o Banco Central (Art. 7º)
-                </h4>
+              <form id="form-empresa" onsubmit="saveCompanyData(event)">
                 <div class="form-row">
                   <div class="form-group">
-                    <label class="form-label">Nome Completo do Diretor Estatutário</label>
-                    <input type="text" id="emp-diretor" class="form-input" required placeholder="Nome do Diretor Responsável no Unicad">
+                    <label class="form-label">Razão Social Completa</label>
+                    <input type="text" id="emp-razao-social" class="form-input" required placeholder="Ex: Banco Exemplo S.A. - Banco Múltiplo">
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Cargo / Título Estatutário</label>
-                    <input type="text" id="emp-cargo" class="form-input" required placeholder="Ex: Diretor Executivo de Riscos e Cibersegurança">
+                    <label class="form-label">Nome Fantasia</label>
+                    <input type="text" id="emp-nome-fantasia" class="form-input" placeholder="Ex: Exemplo Bank">
                   </div>
                 </div>
 
-                <div class="form-row-3" style="margin-top:10px;">
+                <div class="form-row-3" style="margin-top:12px;">
                   <div class="form-group">
-                    <label class="form-label">Código de Registro / Homologação Unicad</label>
-                    <input type="text" id="emp-unicad" class="form-input" placeholder="Ex: UNICAD-12345">
+                    <label class="form-label">CNPJ</label>
+                    <input type="text" id="emp-cnpj" class="form-input" required placeholder="00.000.000/0001-00">
                   </div>
                   <div class="form-group">
-                    <label class="form-label">E-mail Institucional</label>
-                    <input type="email" id="emp-email-diretor" class="form-input" placeholder="diretor@banco.com.br">
+                    <label class="form-label">Segmento BACEN (Res. CMN 4.553)</label>
+                    <select id="emp-segmento" class="form-select">
+                      <option value="S1">S1 - Porte igual ou superior a 10% do PIB / Sistêmico</option>
+                      <option value="S2">S2 - Porte entre 1% e 10% do PIB</option>
+                      <option value="S3" selected>S3 - Porte entre 0,1% e 1% do PIB</option>
+                      <option value="S4">S4 - Porte inferior a 0,1% do PIB</option>
+                      <option value="S5">S5 - Metodologia simplificada / Cooperativas</option>
+                    </select>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Telefone de Contato Direto</label>
-                    <input type="text" id="emp-telefone-diretor" class="form-input" placeholder="(11) 3000-0000">
+                    <label class="form-label">Tipo de Instituição</label>
+                    <select id="emp-tipo" class="form-select">
+                      <option value="Banco Múltiplo">Banco Múltiplo</option>
+                      <option value="Banco Comercial">Banco Comercial</option>
+                      <option value="Banco de Investimento">Banco de Investimento</option>
+                      <option value="Cooperativa de Crédito">Cooperativa de Crédito</option>
+                      <option value="Sociedade de Crédito Direto (SCD)">Sociedade de Crédito Direto (SCD)</option>
+                      <option value="Instituição de Pagamento (IP)">Instituição de Pagamento (IP)</option>
+                      <option value="Outra Instituição Autorizada">Outra Instituição Autorizada</option>
+                    </select>
                   </div>
                 </div>
-              </div>
 
-              <div class="form-row-3" style="margin-top:16px;">
-                <div class="form-group">
-                  <label class="form-label">Data de Aprovação da Política pelo Conselho (Art. 9º)</label>
-                  <input type="date" id="emp-data-aprovacao" class="form-input">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Data da Última Revisão Anual (Art. 10)</label>
-                  <input type="date" id="emp-data-revisao" class="form-input">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Versão Atual da Política de Segurança</label>
-                  <input type="text" id="emp-versao-politica" class="form-input" placeholder="Ex: 3.2">
-                </div>
-              </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:16px; margin-top:16px;">
+                  <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">
+                    Diretor Estatutário Responsável perante o Banco Central (Art. 7º)
+                  </h4>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Nome Completo do Diretor Estatutário</label>
+                      <input type="text" id="emp-diretor" class="form-input" required placeholder="Nome do Diretor Responsável no Unicad">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Cargo / Título Estatutário</label>
+                      <input type="text" id="emp-cargo" class="form-input" required placeholder="Ex: Diretor Executivo de Riscos e Cibersegurança">
+                    </div>
+                  </div>
 
-              <div class="form-group" style="margin-top:14px;">
-                <label class="form-label">Escopo Operacional e Modelo de Negócio (Art. 2º)</label>
-                <textarea id="emp-escopo" class="form-textarea" rows="2" placeholder="Descreva os principais produtos, canais de atendimento, operações PIX, Open Finance e público-alvo..."></textarea>
-              </div>
+                  <div class="form-row-3" style="margin-top:10px;">
+                    <div class="form-group">
+                      <label class="form-label">Código de Registro / Homologação Unicad</label>
+                      <input type="text" id="emp-unicad" class="form-input" placeholder="Ex: BACEN-UNICAD-9821">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">E-mail Institucional</label>
+                      <input type="email" id="emp-email-diretor" class="form-input" placeholder="diretor@banco.com.br">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Telefone de Contato Direto</label>
+                      <input type="text" id="emp-telefone-diretor" class="form-input" placeholder="(11) 3000-0000">
+                    </div>
+                  </div>
+                </div>
 
-              <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:10px;">
-                <button type="submit" class="btn btn-primary">Salvar Dados Cadastrais</button>
+                <div class="form-row-3" style="margin-top:16px;">
+                  <div class="form-group">
+                    <label class="form-label">Data de Aprovação da Política pelo Conselho (Art. 9º)</label>
+                    <input type="date" id="emp-data-aprovacao" class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Data da Última Revisão Anual (Art. 10)</label>
+                    <input type="date" id="emp-data-revisao" class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Versão Atual da Política de Segurança</label>
+                    <input type="text" id="emp-versao-politica" class="form-input" placeholder="Ex: 3.2">
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-top:14px;">
+                  <label class="form-label">Escopo Operacional e Modelo de Negócio (Art. 2º)</label>
+                  <textarea id="emp-escopo" class="form-textarea" rows="2" placeholder="Descreva os principais produtos, canais de atendimento, operações PIX, Open Finance e público-alvo..."></textarea>
+                </div>
+
+                <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:10px;">
+                  <button type="submit" class="btn btn-primary">Salvar Perfil da Empresa</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Tab 2: Gerenciador Multi-Empresas -->
+            <div id="empresa-pane-multi" style="display:none;">
+              <p style="font-size:13px; color:#475569; margin-bottom:16px; line-height:1.5;">
+                Painel centralizado de governança multi-instituição. Permite alternar instantaneamente o contexto ativo de compliance ou gerenciar as instituições autorizadas pelo Banco Central do Brasil.
+              </p>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Instituição Financeira</th>
+                      <th>Segmento BACEN</th>
+                      <th>CNPJ</th>
+                      <th>Diretor Estatutário (Art. 7º)</th>
+                      <th>Homologação UNICAD</th>
+                      <th>Status de Contexto</th>
+                      <th style="text-align:right;">Ações de Isolamento</th>
+                    </tr>
+                  </thead>
+                  <tbody id="multi-empresa-table-body">
+                    <!-- Preenchido via renderMultiCompanyManagerTable() -->
+                  </tbody>
+                </table>
               </div>
-            </form>
+            </div>
+
           </div>
         </div>
       </section>
@@ -1858,65 +2316,228 @@
       <!-- MÓDULO 8: RELATÓRIO ANUAL (ART. 8º)            -->
       <!-- ============================================== -->
       <section id="view-relatorio" class="view-panel">
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:14px;" class="no-print">
-          <button class="btn btn-secondary btn-sm" onclick="window.print()">Imprimir / Salvar PDF</button>
-          <button class="btn btn-primary btn-sm" onclick="exportData('json')">Exportar Dossiê JSON</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;" class="no-print">
+          <div>
+            <h2 style="font-size:18px; font-weight:800; color:#0f172a;">Relatório Anual Regulatório (Art. 8º da Res. CMN nº 4.893/2021)</h2>
+            <p style="font-size:12.5px; color:#64748b; margin-top:2px;">
+              Documento formal obrigatório para submissão ao Comitê de Auditoria, Conselho de Administração e fiscalização do Banco Central do Brasil.
+            </p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary btn-sm" onclick="loadAnnualReport()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Recarregar
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="exportAnnualReportJson()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar JSON
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="printAnnualReport()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Imprimir / PDF Formatado
+            </button>
+          </div>
         </div>
 
         <div class="report-document" id="report-printable">
+          <!-- Timbrado Regulatório -->
           <div class="report-header">
             <div>
-              <div class="report-badge">Documento Regulatório Oficial • BACEN</div>
-              <h1 class="report-title">Relatório Anual sobre a Efetividade da Política de Cibersegurança e do PARI</h1>
-              <div style="font-size:12.5px; color:#64748b; margin-top:3px;">Em cumprimento aos Arts. 8º, 9º e 21 da Resolução CMN nº 4.893/2021 e Resolução CMN nº 5.274/2025</div>
+              <div class="report-badge">Documento Oficial Regulatório • SFN / BACEN</div>
+              <h1 class="report-title">Relatório Anual sobre a Efetividade da Política de Segurança Cibernética e do PARI</h1>
+              <div style="font-size:12px; color:#475569; margin-top:4px;">
+                Elaborado em estrito cumprimento aos Arts. 8º, 9º, 10 e 21 da Resolução CMN nº 4.893/2021 e Resolução CMN nº 5.274/2025
+              </div>
             </div>
             <div style="text-align:right;">
-              <div style="font-weight:700; font-size:14px;" id="rep-inst-nome">Instituição Financeira S.A.</div>
+              <div style="font-weight:800; font-size:15px; color:#0f172a;" id="rep-inst-nome">Instituição Financeira</div>
               <div style="font-size:12px; color:#64748b;" id="rep-inst-cnpj">CNPJ: 00.000.000/0001-00</div>
-              <div style="font-size:12px; color:#64748b;" id="rep-data-base">Data-base: 31 de dezembro de 2025</div>
+              <div style="font-size:12px; font-weight:700; color:#0284c7; margin-top:2px;" id="rep-data-base">Data-base: 31 de dezembro de 2025</div>
             </div>
           </div>
 
-          <div class="report-meta-box">
-            <div>
-              <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700;">Diretor Estatutário Responsável</div>
-              <div style="font-weight:700; font-size:13px; margin-top:2px;" id="rep-diretor">--</div>
-              <div style="font-size:11px; color:#0284c7;" id="rep-unicad">Registro Unicad</div>
+          <!-- SEÇÃO 1: IDENTIFICAÇÃO REGULATÓRIA -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>1. Identificação Regulatória e Governança da Instituição</span>
+              <span class="domain-badge">Art. 7º, 8º e 9º</span>
             </div>
-            <div>
-              <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700;">Enquadramento SFN</div>
-              <div style="font-weight:700; font-size:13px; margin-top:2px;" id="rep-segmento">Segmento S3</div>
-              <div style="font-size:11px; color:#64748b;" id="rep-tipo-inst">Banco Múltiplo</div>
+            <div class="report-meta-box" style="margin-bottom:14px;">
+              <div>
+                <div style="font-size:10.5px; color:#64748b; text-transform:uppercase; font-weight:700;">Diretor Estatutário Responsável</div>
+                <div style="font-weight:800; font-size:13.5px; margin-top:2px;" id="rep-diretor">--</div>
+                <div style="font-size:11px; color:#0284c7;" id="rep-unicad">Registro UNICAD</div>
+              </div>
+              <div>
+                <div style="font-size:10.5px; color:#64748b; text-transform:uppercase; font-weight:700;">Enquadramento BACEN</div>
+                <div style="font-weight:800; font-size:13.5px; margin-top:2px;" id="rep-segmento">Segmento S3</div>
+                <div style="font-size:11px; color:#64748b;" id="rep-tipo-inst">Banco Múltiplo</div>
+              </div>
+              <div>
+                <div style="font-size:10.5px; color:#64748b; text-transform:uppercase; font-weight:700;">Política de Cibersegurança</div>
+                <div style="font-weight:800; font-size:13.5px; margin-top:2px;" id="rep-politica-versao">Versão 3.2</div>
+                <div style="font-size:11px; color:#10b981;" id="rep-politica-aprovacao">Aprovada pelo Conselho</div>
+              </div>
             </div>
-            <div>
-              <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700;">Índice Global de Aderência</div>
-              <div style="font-weight:800; font-size:18px; color:#0284c7; margin-top:2px;" id="rep-score-global">--%</div>
-              <div style="font-size:11px; color:#10b981;">Nível de Maturidade Validado</div>
-            </div>
-          </div>
-
-          <div>
-            <h3 style="font-size:15px; font-weight:800; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">1. Resumo Executivo e Governança</h3>
-            <p style="font-size:12.5px; line-height:1.6; color:#334155;">
-              O presente relatório consolida os resultados da avaliação de efetividade dos controles de segurança cibernética e do Plano de Ação e de Resposta a Incidentes (PARI) do Banco, submetido anualmente à Diretoria Executiva, ao Comitê de Auditoria e ao Conselho de Administração, permanecendo à disposição do Banco Central do Brasil pelo prazo legal mínimo de 5 (cinco) anos, em consonância com os Arts. 8º, 9º, 10 e 21 da Resolução CMN nº 4.893/2021.
+            <p style="font-size:12.5px; line-height:1.6; color:#334155;" id="rep-escopo-texto">
+              Instituição autorizada pelo BACEN para operar no Sistema Financeiro Nacional, cumprindo integralmente as exigências de segurança cibernética e de contratação de serviços de nuvem.
             </p>
           </div>
 
-          <div>
-            <h3 style="font-size:15px; font-weight:800; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">2. Aferição dos 14 Controles Mínimos da Resolução CMN nº 5.274/2025</h3>
+          <!-- SEÇÃO 2: AVALIAÇÃO DA EFETIVIDADE DA POLÍTICA -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>2. Avaliação da Efetividade da Política de Segurança Cibernética</span>
+              <span class="domain-badge">Res. 4.893 & Res. 5.274</span>
+            </div>
+            <div class="report-kpi-grid-4">
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" id="rep-score-global">--%</div>
+                <div class="report-kpi-stat-lbl">Aderência Global Res. 4.893</div>
+              </div>
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" style="color:#10b981;" id="rep-score-5274">--%</div>
+                <div class="report-kpi-stat-lbl">Aderência aos 14 Controles (5.274)</div>
+              </div>
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" style="color:#0f172a;" id="rep-controles-atendidos">--/14</div>
+                <div class="report-kpi-stat-lbl">Controles Mínimos 100% Atendidos</div>
+              </div>
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" style="color:#f59e0b;" id="rep-controles-parciais">--</div>
+                <div class="report-kpi-stat-lbl">Controles em Adequação 5W2H</div>
+              </div>
+            </div>
+
+            <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-top:16px; margin-bottom:8px;">
+              Quadro Demonstrativo: Aferição dos 14 Controles Mandatórios (Art. 3º - Resolução CMN nº 5.274/2025)
+            </h4>
             <div id="rep-table-5274"></div>
           </div>
 
-          <div>
-            <h3 style="font-size:15px; font-weight:800; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">3. Declaração e Assinatura do Diretor Estatutário</h3>
-            <p style="font-size:12.5px; line-height:1.6; color:#334155;" id="rep-conclusao-texto">
-              Declaro que os controles implantados cumprem com os requisitos regulamentares vigentes.
+          <!-- SEÇÃO 3: CONSOLIDADO DE INCIDENTES RELEVANTES -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>3. Consolidado de Incidentes Relevantes e Métricas de Resposta (Art. 6º)</span>
+              <span class="domain-badge">MTTD & MTTR</span>
+            </div>
+            <div class="report-kpi-grid-4">
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" id="rep-inc-total">0</div>
+                <div class="report-kpi-stat-lbl">Total de Incidentes no Exercício</div>
+              </div>
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" style="color:#0284c7;" id="rep-inc-mttd">-- min</div>
+                <div class="report-kpi-stat-lbl">MTTD Médio (Tempo de Detecção)</div>
+              </div>
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" style="color:#10b981;" id="rep-inc-mttr">-- min</div>
+                <div class="report-kpi-stat-lbl">MTTR Médio (Tempo de Resolução)</div>
+              </div>
+              <div class="report-kpi-stat-box">
+                <div class="report-kpi-stat-val" style="color:#64748b;" id="rep-inc-notificados">0</div>
+                <div class="report-kpi-stat-lbl">Notificações ao Sisbacen (Art. 6º)</div>
+              </div>
+            </div>
+
+            <div style="margin-top:14px;">
+              <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">Detalhamento das Ocorrências Registradas</h4>
+              <div id="rep-table-incidentes"></div>
+            </div>
+          </div>
+
+          <!-- SEÇÃO 4: CONTINUIDADE E SIMULADOS PARI -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>4. Resultados de Testes de Continuidade e Simulados de Crise (PARI)</span>
+              <span class="domain-badge">Tabletop Drills</span>
+            </div>
+            <div id="rep-csirt-info" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:12px 16px; margin-bottom:14px; font-size:12px;"></div>
+            <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">Exercícios Simulados Executados no Período</h4>
+            <div id="rep-table-simulados"></div>
+          </div>
+
+          <!-- SEÇÃO 5: AUDITORIAS E FRAGILIDADES IDENTIFICADAS -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>5. Auditorias Independentes e Fragilidades Identificadas (Pentests)</span>
+              <span class="domain-badge">Vulnerabilidades</span>
+            </div>
+            <p style="font-size:12.5px; color:#475569; margin-bottom:12px;">
+              Sumário de testes de intrusão (Pentests) independentes e varreduras de vulnerabilidades executadas nos termos do Art. 3º, IV da Resolução CMN 4.893 e boas práticas internacionais:
+            </p>
+            <div id="rep-table-fragilidades"></div>
+          </div>
+
+          <!-- SEÇÃO 6: PLANOS DE AÇÃO 5W2H E NUVEM -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>6. Planos de Ação e Adequação (5W2H) & Fornecedores Relevantes (Art. 17)</span>
+              <span class="domain-badge">Adequação Contínua</span>
+            </div>
+            <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">Planos 5W2H para Requisitos em Implementação</h4>
+            <div id="rep-table-planos" style="margin-bottom:18px;"></div>
+            
+            <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">Serviços Relevantes em Nuvem Notificados ao BACEN</h4>
+            <div id="rep-table-nuvem"></div>
+          </div>
+
+          <!-- SEÇÃO 7: PARECER FORMAL DO DIRETOR ESTATUTÁRIO -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>7. Parecer Formal do Diretor Estatutário Responsável (Art. 7º e 8º)</span>
+              <span class="domain-badge" id="rep-sig-badge">Pendente</span>
+            </div>
+            <p style="font-size:12.5px; color:#475569; margin-bottom:12px;">
+              Manifestação conclusiva formal perante o Banco Central do Brasil acerca da conformidade, governança e efetividade das salvaguardas de cibersegurança:
             </p>
 
-            <div class="signature-box">
-              <div class="signature-name" id="rep-sig-name">Nome do Diretor</div>
-              <div class="signature-cargo" id="rep-sig-cargo">Diretor Estatutário perante o BACEN</div>
-              <div style="font-size:11px; color:#64748b; margin-top:2px;">Homologação Unicad Banco Central do Brasil</div>
+            <div class="no-print" style="margin-bottom:14px;">
+              <textarea id="rep-parecer-input" class="form-textarea" rows="4" style="font-size:12.5px; line-height:1.5;" placeholder="Insira a manifestação conclusiva do Diretor Estatutário..."></textarea>
+              <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                <button class="btn btn-primary btn-sm" onclick="signAnnualReport()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Assinar Eletronicamente (Art. 7º e 8º BACEN)
+                </button>
+              </div>
+            </div>
+
+            <div id="rep-parecer-texto-display" style="font-size:12.5px; line-height:1.6; color:#0f172a; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); margin-bottom:14px;"></div>
+
+            <!-- Digital Signature Certificate Seal -->
+            <div class="digital-seal-box" id="rep-digital-seal-box">
+              <div class="digital-seal-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="font-size:13.5px; color:#065f46;" id="rep-seal-title">Assinatura Eletrônica Registrada (Resolução CMN nº 4.893/2021)</strong>
+                  <span class="status-badge atendido" id="rep-seal-status">Assinado Digitalmente</span>
+                </div>
+                <div style="font-size:12px; color:#047857; margin-top:3px;">
+                  Assinado por: <strong id="rep-seal-autor">Roberto Silveira Mello</strong> • Cargo: <span id="rep-seal-cargo">Diretor Estatutário perante o BACEN</span> • UNICAD: <span id="rep-seal-unicad">BACEN-UNICAD-9821</span>
+                </div>
+                <div style="font-size:11.5px; color:#065f46; margin-top:2px;">
+                  Carimbo de Tempo UTC: <span id="rep-seal-timestamp">2026-02-18 14:00:00</span>
+                </div>
+                <div class="digital-seal-hash" id="rep-seal-hash">
+                  Hash SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SEÇÃO 8: TERMO DE ENCERRAMENTO E METADADOS -->
+          <div class="report-section-card">
+            <div class="report-section-title">
+              <span>8. Termo de Encerramento e Metadados de Integridade Probatória</span>
+              <span class="domain-badge">Custódia 5 Anos (Art. 21)</span>
+            </div>
+            <p style="font-size:12px; line-height:1.6; color:#475569;">
+              Em conformidade com o <strong>Art. 21 da Resolução CMN nº 4.893/2021</strong>, este relatório anual, acompanhado de todos os laudos de testes de intrusão, atas de deliberação do Conselho de Administração e evidências documentais das avaliações dos controles da Resolução CMN nº 5.274/2025, permanecerá sob custódia e à inteira disposição do Banco Central do Brasil pelo prazo mínimo regulamentar de <strong>5 (cinco) anos</strong>.
+            </p>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-sm); padding:10px 14px; margin-top:10px; font-size:11.5px; font-family:'JetBrains Mono', monospace; color:#334155;" id="rep-meta-footer">
+              Autenticação Documental: SHA-256 | Algoritmo FIPS 180-4 | Gerado automaticamente pelo Sistema GRC BACEN
             </div>
           </div>
         </div>
@@ -2560,10 +3181,11 @@
   </div>
 
   <script>
-    // State
+    // State com Isolamento Multi-Tenant Global
     let appData = {
       currentUser: null,
       activeRole: null,
+      activeCompanyId: null,
       accessibleInstitutions: [],
       instituicoes: [],
       instituicao: null,
@@ -2600,6 +3222,17 @@
           if (!options.headers['Authorization']) {
             options.headers['Authorization'] = `Bearer ${token}`;
           }
+        }
+      }
+      // Injeção de Contexto Multi-Tenant Obrigatória
+      const currentActiveCompId = appData.activeCompanyId || localStorage.getItem('bacen_grc_active_company_id');
+      if (currentActiveCompId) {
+        if (options.headers instanceof Headers) {
+          if (!options.headers.has('X-Company-ID')) options.headers.set('X-Company-ID', String(currentActiveCompId));
+        } else if (Array.isArray(options.headers)) {
+          options.headers.push(['X-Company-ID', String(currentActiveCompId)]);
+        } else {
+          if (!options.headers['X-Company-ID']) options.headers['X-Company-ID'] = String(currentActiveCompId);
         }
       }
       const res = await originalFetch(url, options);
@@ -3112,6 +3745,218 @@
       event.target.classList.add('active');
     }
 
+    // Multi-tenant Company Context Selector Functions
+    function toggleCompanyDropdown(event) {
+      if (event) event.stopPropagation();
+      const menu = document.getElementById('company-dropdown-menu');
+      const arrow = document.getElementById('top-company-arrow');
+      if (!menu) return;
+      const isOpen = menu.style.display === 'block';
+      menu.style.display = isOpen ? 'none' : 'block';
+      if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+      if (!isOpen) {
+        renderCompanyDropdownList();
+        const searchInput = document.getElementById('company-search-input');
+        if (searchInput) {
+          searchInput.value = '';
+          setTimeout(() => searchInput.focus(), 50);
+        }
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('company-dropdown-menu');
+      const btn = document.getElementById('company-selector-btn');
+      if (menu && menu.style.display === 'block' && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.style.display = 'none';
+        const arrow = document.getElementById('top-company-arrow');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+      }
+    });
+
+    function renderCompanyDropdownList(filterTerm = '') {
+      const listContainer = document.getElementById('company-dropdown-list');
+      if (!listContainer) return;
+      listContainer.innerHTML = '';
+      const list = appData.accessibleInstitutions || appData.instituicoes || [];
+      const term = filterTerm.trim().toLowerCase();
+
+      const filtered = list.filter(inst => {
+        if (!term) return true;
+        return (inst.razao_social || '').toLowerCase().includes(term) ||
+               (inst.nome_fantasia || '').toLowerCase().includes(term) ||
+               (inst.cnpj || '').toLowerCase().includes(term) ||
+               (inst.segmento || '').toLowerCase().includes(term);
+      });
+
+      if (filtered.length === 0) {
+        listContainer.innerHTML = '<div style="padding:16px; text-align:center; color:#94a3b8; font-size:12px;">Nenhuma instituição encontrada.</div>';
+        return;
+      }
+
+      filtered.forEach(inst => {
+        const item = document.createElement('div');
+        const isActive = inst.id === appData.activeCompanyId;
+        item.className = `company-dropdown-item ${isActive ? 'active' : ''}`;
+        item.onclick = () => {
+          switchActiveCompanyContext(inst.id);
+          toggleCompanyDropdown();
+        };
+        item.innerHTML = `
+          <div style="flex:1; min-width:0;">
+            <div class="cd-item-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${inst.razao_social}
+            </div>
+            <div class="cd-item-meta">
+              CNPJ: ${inst.cnpj} • ${inst.tipo_instituicao || 'SCD/Banco'}
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="company-segmento-badge">${inst.segmento}</span>
+            ${isActive ? '<span style="color:#10b981; font-size:14px;">✓</span>' : ''}
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+    }
+
+    function filterCompanyDropdown(val) {
+      renderCompanyDropdownList(val);
+    }
+
+    async function switchActiveCompanyContext(newId) {
+      newId = parseInt(newId);
+      if (appData.activeCompanyId === newId && appData.instituicao) return;
+      appData.activeCompanyId = newId;
+      localStorage.setItem('bacen_grc_active_company_id', newId);
+
+      const found = (appData.accessibleInstitutions || []).find(i => i.id === newId) ||
+                    (appData.instituicoes || []).find(i => i.id === newId);
+      if (found) {
+        appData.instituicao = found;
+      }
+
+      updateCompanyContextSelectorUI();
+      updatePersistentCompanyBanner();
+      showToast(`Contexto regulatório alternado para: ${appData.instituicao ? appData.instituicao.razao_social : newId}`, 'info');
+
+      await reloadAllContextData();
+    }
+
+    function updateCompanyContextSelectorUI() {
+      if (!appData.instituicao) return;
+      const inst = appData.instituicao;
+      const nameEl = document.getElementById('top-company-current-name');
+      const segEl = document.getElementById('top-company-current-segmento');
+      if (nameEl) nameEl.innerText = inst.razao_social;
+      if (segEl) segEl.innerText = inst.segmento;
+    }
+
+    function updatePersistentCompanyBanner() {
+      if (!appData.instituicao) return;
+      const inst = appData.instituicao;
+
+      const pciRazao = document.getElementById('pci-razao-social');
+      const pciSeg = document.getElementById('pci-segmento');
+      const pciTipo = document.getElementById('pci-tipo');
+      const pciCnpj = document.getElementById('pci-cnpj');
+      const pciUnicad = document.getElementById('pci-unicad');
+      const pciPolitica = document.getElementById('pci-politica');
+      const pciDirName = document.getElementById('pci-director-name');
+      const pciDirCargo = document.getElementById('pci-director-cargo');
+
+      if (pciRazao) pciRazao.innerText = inst.razao_social;
+      if (pciSeg) pciSeg.innerText = `BACEN ${inst.segmento}`;
+      if (pciTipo) pciTipo.innerText = inst.tipo_instituicao || 'Banco Múltiplo';
+      if (pciCnpj) pciCnpj.innerText = inst.cnpj;
+      if (pciUnicad) pciUnicad.innerText = inst.registro_unicad || 'Homologado';
+      if (pciPolitica) pciPolitica.innerText = `v${inst.versao_politica || '1.0'} (Aprovada pelo Conselho)`;
+      if (pciDirName) pciDirName.innerText = inst.diretor_responsavel || 'Diretor Estatutário';
+      if (pciDirCargo) pciDirCargo.innerText = inst.cargo_diretor || 'Diretor perante o BACEN';
+
+      const footDir = document.getElementById('footer-director-name');
+      if (footDir) footDir.innerText = inst.diretor_responsavel || 'Diretor Responsável';
+      const avatarInit = document.getElementById('avatar-initials');
+      if (avatarInit && inst.diretor_responsavel) {
+        const parts = inst.diretor_responsavel.replace('Dr.', '').replace('Dra.', '').trim().split(' ');
+        avatarInit.innerText = (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+      }
+    }
+
+    function switchEmpresaTab(tabName) {
+      const btnPerfil = document.getElementById('tab-btn-perfil');
+      const btnMulti = document.getElementById('tab-btn-multi');
+      const panePerfil = document.getElementById('empresa-pane-perfil');
+      const paneMulti = document.getElementById('empresa-pane-multi');
+
+      if (tabName === 'perfil') {
+        if (btnPerfil) btnPerfil.classList.add('active');
+        if (btnMulti) btnMulti.classList.remove('active');
+        if (panePerfil) panePerfil.style.display = 'block';
+        if (paneMulti) paneMulti.style.display = 'none';
+        populateCompanyForm();
+      } else {
+        if (btnPerfil) btnPerfil.classList.remove('active');
+        if (btnMulti) btnMulti.classList.add('active');
+        if (panePerfil) panePerfil.style.display = 'none';
+        if (paneMulti) paneMulti.style.display = 'block';
+        renderMultiCompanyManagerTable();
+      }
+    }
+
+    function renderMultiCompanyManagerTable() {
+      const tbody = document.getElementById('multi-empresa-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const list = appData.accessibleInstitutions || appData.instituicoes || [];
+
+      list.forEach(inst => {
+        const isCurrent = inst.id === appData.activeCompanyId;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <strong>${inst.razao_social}</strong>
+            ${inst.nome_fantasia ? `<br><span style="font-size:11.5px; color:#64748b;">${inst.nome_fantasia}</span>` : ''}
+          </td>
+          <td><span class="company-segmento-badge">${inst.segmento}</span></td>
+          <td style="font-family:'JetBrains Mono'; font-size:11.5px;">${inst.cnpj}</td>
+          <td>
+            <div style="font-weight:700;">${inst.diretor_responsavel || '-'}</div>
+            <div style="font-size:11px; color:#64748b;">${inst.cargo_diretor || '-'}</div>
+          </td>
+          <td style="font-size:11.5px; color:#0284c7; font-family:'JetBrains Mono';">${inst.registro_unicad || '-'}</td>
+          <td>
+            ${isCurrent ? 
+              '<span class="status-badge atendido" style="font-weight:700;">● CONTEXTO ATIVO</span>' : 
+              '<span class="status-badge nao_atendido">Disponível</span>'}
+          </td>
+          <td style="text-align:right;">
+            ${isCurrent ? 
+              `<button class="btn btn-outline-primary btn-sm" onclick="switchEmpresaTab('perfil')">Editar Perfil</button>` : 
+              `<button class="btn btn-primary btn-sm" onclick="switchActiveCompanyContext(${inst.id})">Alternar Contexto</button>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function reloadAllContextData() {
+      await loadDashboard();
+      await loadRequisitos();
+      await loadEvidencias();
+      await loadPari();
+      await loadNuvem();
+      await loadPlanos();
+      await loadAuditoria();
+      const activeView = document.querySelector('.view-panel.active')?.id;
+      if (activeView === 'view-relatorio') {
+        await loadAnnualReport();
+      } else if (activeView === 'view-empresa') {
+        populateCompanyForm();
+        renderMultiCompanyManagerTable();
+      }
+    }
+
     // Initialize App with Session Check
     async function init() {
       try {
@@ -3129,6 +3974,15 @@
         appData.currentUser = authData.user;
         appData.activeRole = authData.perfil_ativo;
         appData.accessibleInstitutions = authData.instituicoes;
+
+        // Recuperar contexto ativo de instituição persistido
+        const savedCompId = localStorage.getItem('bacen_grc_active_company_id');
+        if (savedCompId && authData.instituicoes.some(i => i.id == savedCompId)) {
+          appData.activeCompanyId = parseInt(savedCompId);
+        } else {
+          appData.activeCompanyId = authData.instituicao_ativa_id || (authData.instituicoes[0] ? authData.instituicoes[0].id : 1);
+          localStorage.setItem('bacen_grc_active_company_id', appData.activeCompanyId);
+        }
 
         updateUserBadge(authData.user, authData.perfil_ativo);
         applyRoleRestrictions(authData.perfil_ativo, authData.user.is_admin_geral);
@@ -3157,19 +4011,19 @@
         const res = await fetch('/api/instituicoes');
         const list = await res.json();
         appData.instituicoes = list;
+        appData.accessibleInstitutions = list;
 
-        const select = document.getElementById('select-instituicao-ativa');
-        select.innerHTML = '';
-        list.forEach(inst => {
-          const opt = document.createElement('option');
-          opt.value = inst.id;
-          opt.innerText = `${inst.razao_social} (${inst.segmento})`;
-          if (inst.is_ativa) {
-            opt.selected = true;
-            appData.instituicao = inst;
-          }
-        });
-        updateHeaderAndFooterWithCompany();
+        // Sincronizar instituição ativa
+        appData.instituicao = list.find(i => i.id === appData.activeCompanyId) || list[0];
+        if (appData.instituicao) {
+          appData.activeCompanyId = appData.instituicao.id;
+          localStorage.setItem('bacen_grc_active_company_id', appData.activeCompanyId);
+        }
+
+        updateCompanyContextSelectorUI();
+        updatePersistentCompanyBanner();
+        populateCompanyForm();
+        renderMultiCompanyManagerTable();
       } catch (err) {
         console.error("Erro ao carregar instituições:", err);
       }
@@ -3275,11 +4129,14 @@
           body: JSON.stringify(payload)
         });
         if (res.ok) {
+          const resp = await res.json();
           closeModal('modal-nova-instituicao');
           await loadInstituicoes();
-          await loadDashboard();
-          await loadRequisitos();
+          if (resp && resp.id) {
+            await switchActiveCompanyContext(resp.id);
+          }
           switchView('empresa');
+          showToast("Nova instituição cadastrada e ativada!", 'success');
         }
       } catch (err) {
         alert("Erro ao criar nova instituição.");
@@ -4021,51 +4878,318 @@
       }
     }
 
-    // 8. Relatório Anual (Art. 8º)
+    // 8. Relatório Anual (Art. 8º da Res. CMN nº 4.893/2021)
     async function loadAnnualReport() {
       try {
         const res = await fetch('/api/relatorio_anual');
         const data = await res.json();
 
-        document.getElementById('rep-inst-nome').innerText = data.instituicao.razao_social;
-        document.getElementById('rep-inst-cnpj').innerText = `CNPJ: ${data.instituicao.cnpj}`;
-        document.getElementById('rep-diretor').innerText = data.instituicao.diretor_responsavel;
-        document.getElementById('rep-unicad').innerText = data.instituicao.registro_unicad ? `Unicad: ${data.instituicao.registro_unicad}` : 'Homologação Unicad BACEN';
-        document.getElementById('rep-segmento').innerText = `Segmento ${data.instituicao.segmento}`;
-        document.getElementById('rep-tipo-inst').innerText = data.instituicao.tipo_instituicao || 'Banco Múltiplo';
-        document.getElementById('rep-score-global').innerText = `${data.kpis.percentual_aderencia_global}%`;
-        document.getElementById('rep-conclusao-texto').innerText = data.conclusao_diretor;
-        document.getElementById('rep-sig-name').innerText = data.instituicao.diretor_responsavel;
-        document.getElementById('rep-sig-cargo').innerText = data.instituicao.cargo_diretor;
+        // 1. Identificação Regulatória
+        const s1 = data.secao_1_identificacao;
+        const inst = s1.instituicao;
+        document.getElementById('rep-inst-nome').innerText = inst.razao_social;
+        document.getElementById('rep-inst-cnpj').innerText = `CNPJ: ${inst.cnpj}`;
+        document.getElementById('rep-diretor').innerText = inst.diretor_responsavel;
+        document.getElementById('rep-unicad').innerText = inst.registro_unicad ? `UNICAD: ${inst.registro_unicad}` : 'BACEN Homologado';
+        document.getElementById('rep-segmento').innerText = `Segmento BACEN ${inst.segmento}`;
+        document.getElementById('rep-tipo-inst').innerText = inst.tipo_instituicao || 'Banco Múltiplo';
+        document.getElementById('rep-politica-versao').innerText = `Versão ${inst.versao_politica || '1.0'}`;
+        document.getElementById('rep-politica-aprovacao').innerText = inst.data_aprovacao_politica ? `Aprovada em ${inst.data_aprovacao_politica}` : 'Aprovada pelo Conselho';
+        document.getElementById('rep-escopo-texto').innerText = inst.escopo_operacional || 'Escopo operacional regular no Sistema Financeiro Nacional.';
 
-        const rep5274 = document.getElementById('rep-table-5274');
+        // 2. Avaliação de Efetividade da Política (KPIs e Controles 5.274)
+        const s2 = data.secao_2_efetividade_politica;
+        document.getElementById('rep-score-global').innerText = `${s2.kpis_globais.percentual_aderencia_global}%`;
+        document.getElementById('rep-score-5274').innerText = `${s2.cmn_5274_stats.aderencia_media}%`;
+        document.getElementById('rep-controles-atendidos').innerText = `${s2.cmn_5274_stats.atendido}/14`;
+        document.getElementById('rep-controles-parciais').innerText = `${s2.cmn_5274_stats.parcialmente_atendido + s2.cmn_5274_stats.em_implementacao}`;
+
+        const rep5274Container = document.getElementById('rep-table-5274');
         let html5 = `<table class="data-table" style="margin-top:8px;">
           <thead>
             <tr>
-              <th>Artigo / Requisito</th>
-              <th>Controle Técnico Mandatório (Res. 5.274)</th>
+              <th>Nº / Artigo</th>
+              <th>Controle Técnico Mandatório (Resolução CMN nº 5.274/2025)</th>
               <th>Status</th>
               <th>Aderência</th>
-              <th>Justificativa / Parecer</th>
+              <th>Justificativa Técnica e Parecer</th>
             </tr>
           </thead>
           <tbody>`;
-
-        data.requisitos.filter(r => r.is_cmn_5274_obrigatorio).forEach(r => {
+        s2.requisitos_detalhados.filter(r => r.is_cmn_5274_obrigatorio).forEach(r => {
           html5 += `<tr>
-            <td><strong>${r.codigo}</strong><br><span style="font-size:11px;color:#64748b;">${r.artigo}</span></td>
-            <td><div style="font-weight:700;">${r.titulo}</div></td>
+            <td><strong>#${r.numero_controle_5274}</strong><br><span style="font-size:11px;color:#64748b;">${r.codigo}</span></td>
+            <td><div style="font-weight:700;">${r.titulo}</div><div style="font-size:11px;color:#64748b;">${r.artigo}</div></td>
             <td><span class="status-badge ${r.status}">${r.status}</span></td>
             <td><strong>${r.percentual_aderencia}%</strong></td>
             <td style="font-size:11.5px; color:#475569;">${r.justificativa || '-'}</td>
           </tr>`;
         });
         html5 += `</tbody></table>`;
-        rep5274.innerHTML = html5;
+        rep5274Container.innerHTML = html5;
+
+        // 3. Consolidado de Incidentes Relevantes (Art. 6º) com MTTD e MTTR
+        const s3 = data.secao_3_incidentes_relevantes;
+        document.getElementById('rep-inc-total').innerText = s3.metricas.total_incidentes || 0;
+        document.getElementById('rep-inc-mttd').innerText = s3.metricas.mttd_medio_minutos !== null ? `${s3.metricas.mttd_medio_minutos} min` : '0 min';
+        document.getElementById('rep-inc-mttr').innerText = s3.metricas.mttr_medio_minutos !== null ? `${s3.metricas.mttr_medio_minutos} min` : '0 min';
+        document.getElementById('rep-inc-notificados').innerText = s3.metricas.total_notificados_bacen || 0;
+
+        const repIncContainer = document.getElementById('rep-table-incidentes');
+        if (s3.incidentes && s3.incidentes.length > 0) {
+          let htmlInc = `<table class="data-table">
+            <thead>
+              <tr>
+                <th>Protocolo</th>
+                <th>Título do Incidente</th>
+                <th>Categoria</th>
+                <th>Criticidade</th>
+                <th>MTTD / MTTR</th>
+                <th>Impacto Operacional & Causa Raiz</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>`;
+          s3.incidentes.forEach(inc => {
+            htmlInc += `<tr>
+              <td style="font-family:'JetBrains Mono'; font-weight:700;">${inc.protocolo}</td>
+              <td><strong>${inc.titulo}</strong><br><span style="font-size:11px;color:#64748b;">${inc.sistemas_afetados}</span></td>
+              <td><span class="domain-badge">${inc.categoria}</span></td>
+              <td><span class="status-badge ${inc.criticidade === 'Crítica' ? 'nao_atendido' : 'parcialmente_atendido'}">${inc.criticidade}</span></td>
+              <td style="font-size:11.5px; font-family:'JetBrains Mono';">
+                Det: ${inc.tempo_deteccao_minutos || 0}m<br>Res: ${inc.tempo_resolucao_minutos || 0}m
+              </td>
+              <td style="font-size:11.5px; color:#475569;">${inc.impacto_operacional || '-'}<br><em>${inc.causa_raiz || ''}</em></td>
+              <td><span class="status-badge atendido">${inc.status}</span></td>
+            </tr>`;
+          });
+          htmlInc += `</tbody></table>`;
+          repIncContainer.innerHTML = htmlInc;
+        } else {
+          repIncContainer.innerHTML = '<div style="padding:14px; text-align:center; color:#64748b; font-size:12.5px;">Nenhum incidente registrado no período de avaliação.</div>';
+        }
+
+        // 4. Continuidade e Simulados PARI
+        const s4 = data.secao_4_continuidade_simulados;
+        const csirt = s4.governanca_csirt;
+        if (csirt) {
+          document.getElementById('rep-csirt-info').innerHTML = `
+            <strong>Estrutura CSIRT (Plantão 24x7):</strong> Líder: ${csirt.lider_csirt} (${csirt.email_csirt}) • Telefone de Emergência: <strong>${csirt.telefone_plantao_247}</strong><br>
+            <strong>Critérios de Relevância BACEN:</strong> ${csirt.criterios_relevancia_bacen || 'Notificação obrigatória de acordo com o Art. 6º.'}
+          `;
+        }
+
+        const repSimContainer = document.getElementById('rep-table-simulados');
+        if (s4.simulados_realizados && s4.simulados_realizados.length > 0) {
+          let htmlSim = `<table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Exercício / Simulado</th>
+                <th>Cenário Testado</th>
+                <th>Tempo Resposta</th>
+                <th>Gargalos & Planos de Melhoria</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>`;
+          s4.simulados_realizados.forEach(sim => {
+            htmlSim += `<tr>
+              <td style="font-family:'JetBrains Mono'; font-size:11.5px;">${sim.data_realizacao}</td>
+              <td><strong>${sim.titulo_simulado}</strong><br><span style="font-size:11px;color:#64748b;">${sim.participantes}</span></td>
+              <td style="font-size:12px;">${sim.cenario_testado}</td>
+              <td style="font-family:'JetBrains Mono'; font-weight:700; color:#0284c7;">${sim.tempo_resposta_alcancado || '-'}</td>
+              <td style="font-size:11.5px; color:#475569;">${sim.gargalos_identificados || '-'}<br><strong>Ação:</strong> ${sim.acoes_melhoria || '-'}</td>
+              <td><span class="status-badge atendido">${sim.status}</span></td>
+            </tr>`;
+          });
+          htmlSim += `</tbody></table>`;
+          repSimContainer.innerHTML = htmlSim;
+        } else {
+          repSimContainer.innerHTML = '<div style="padding:14px; text-align:center; color:#64748b; font-size:12.5px;">Nenhum simulado de mesa registrado no período.</div>';
+        }
+
+        // 5. Auditorias e Fragilidades (Pentests)
+        const s5 = data.secao_5_auditorias_fragilidades;
+        const repFragContainer = document.getElementById('rep-table-fragilidades');
+        if (s5.lista && s5.lista.length > 0) {
+          let htmlFrag = `<table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Título da Auditoria / Pentest</th>
+                <th>Tipo</th>
+                <th>Severidade</th>
+                <th>Descrição Técnica</th>
+                <th>Prazo / Responsável</th>
+                <th>Remediação</th>
+              </tr>
+            </thead>
+            <tbody>`;
+          s5.lista.forEach(f => {
+            htmlFrag += `<tr>
+              <td style="font-family:'JetBrains Mono'; font-size:11.5px;">${f.data_identificacao}</td>
+              <td><strong>${f.titulo}</strong></td>
+              <td><span class="domain-badge">${f.tipo}</span></td>
+              <td><span class="status-badge ${f.severidade === 'Critica' ? 'nao_atendido' : (f.severidade === 'Alta' ? 'parcialmente_atendido' : 'atendido')}">${f.severidade}</span></td>
+              <td style="font-size:11.5px; color:#475569;">${f.descricao}</td>
+              <td style="font-size:11px;">Prazo: ${f.prazo_remediacao || '-'}<br>Resp: ${f.responsavel || '-'}</td>
+              <td><span class="status-badge ${f.status_remediacao === 'Remediada' ? 'atendido' : 'em_implementacao'}">${f.status_remediacao}</span></td>
+            </tr>`;
+          });
+          htmlFrag += `</tbody></table>`;
+          repFragContainer.innerHTML = htmlFrag;
+        } else {
+          repFragContainer.innerHTML = '<div style="padding:14px; text-align:center; color:#64748b; font-size:12.5px;">Nenhuma vulnerabilidade ou fragilidade em aberto registrada.</div>';
+        }
+
+        // 6. Planos de Ação 5W2H e Nuvem Art. 17
+        const s6 = data.secao_6_planos_adequacao;
+        const repPlanosContainer = document.getElementById('rep-table-planos');
+        if (s6.planos_5w2h && s6.planos_5w2h.length > 0) {
+          let htmlPlan = `<table class="data-table">
+            <thead>
+              <tr>
+                <th>Requisito</th>
+                <th>Título do Plano (O que)</th>
+                <th>Quem (Responsável)</th>
+                <th>Quando (Prazo)</th>
+                <th>Progresso</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>`;
+          s6.planos_5w2h.forEach(p => {
+            htmlPlan += `<tr>
+              <td style="font-family:'JetBrains Mono'; font-weight:700;">${p.requisito_codigo || '-'}</td>
+              <td><strong>${p.titulo}</strong><br><span style="font-size:11px;color:#64748b;">${p.por_que}</span></td>
+              <td>${p.quem}</td>
+              <td style="font-family:'JetBrains Mono'; font-size:11.5px;">${p.quando}</td>
+              <td>
+                <div style="font-family:'JetBrains Mono'; font-weight:700;">${p.progresso_pct}%</div>
+                <div style="height:4px; width:70px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-top:2px;">
+                  <div style="height:100%; width:${p.progresso_pct}%; background:#3b82f6;"></div>
+                </div>
+              </td>
+              <td><span class="status-badge em_implementacao">${p.status}</span></td>
+            </tr>`;
+          });
+          htmlPlan += `</tbody></table>`;
+          repPlanosContainer.innerHTML = htmlPlan;
+        } else {
+          repPlanosContainer.innerHTML = '<div style="padding:14px; text-align:center; color:#64748b; font-size:12.5px;">Todos os requisitos plenamente atendidos.</div>';
+        }
+
+        const repNuvemContainer = document.getElementById('rep-table-nuvem');
+        if (s6.fornecedores_nuvem_art17 && s6.fornecedores_nuvem_art17.length > 0) {
+          let htmlNuv = `<table class="data-table">
+            <thead>
+              <tr>
+                <th>Provedor de Nuvem</th>
+                <th>Serviço Prestado</th>
+                <th>País de Armazenamento</th>
+                <th>Notificado BACEN</th>
+                <th>Cláusulas Art. 17</th>
+                <th>Risco Residual</th>
+              </tr>
+            </thead>
+            <tbody>`;
+          s6.fornecedores_nuvem_art17.forEach(n => {
+            htmlNuv += `<tr>
+              <td><strong>${n.nome_provedor}</strong><br><span style="font-size:11px;color:#64748b;">${n.tipo_nuvem}</span></td>
+              <td style="font-size:12px;">${n.servico_prestado}</td>
+              <td style="font-size:11.5px;">${n.pais_armazenamento}</td>
+              <td>${n.notificado_bacen ? '<span class="status-badge atendido">Sim (60d)</span>' : '<span class="status-badge nao_atendido">Não</span>'}</td>
+              <td><span class="status-badge atendido">100% Cumpridas</span></td>
+              <td><span class="status-badge ${n.nivel_risco === 'Baixo' ? 'atendido' : 'parcialmente_atendido'}">${n.nivel_risco}</span></td>
+            </tr>`;
+          });
+          htmlNuv += `</tbody></table>`;
+          repNuvemContainer.innerHTML = htmlNuv;
+        }
+
+        // 7. Parecer Formal do Diretor Estatutário e Assinatura Digital
+        const s7 = data.secao_7_parecer_diretor;
+        const parecerInput = document.getElementById('rep-parecer-input');
+        const parecerDisplay = document.getElementById('rep-parecer-texto-display');
+        const sealAutor = document.getElementById('rep-seal-autor');
+        const sealCargo = document.getElementById('rep-seal-cargo');
+        const sealUnicad = document.getElementById('rep-seal-unicad');
+        const sealTimestamp = document.getElementById('rep-seal-timestamp');
+        const sealHash = document.getElementById('rep-seal-hash');
+        const sealStatus = document.getElementById('rep-seal-status');
+        const sigBadge = document.getElementById('rep-sig-badge');
+
+        if (parecerInput) parecerInput.value = s7.parecer_conclusivo || '';
+        if (parecerDisplay) parecerDisplay.innerText = s7.parecer_conclusivo || 'Parecer formal pendente de emissão pelo Diretor Estatutário.';
+        if (sealAutor) sealAutor.innerText = s7.assinado_por || inst.diretor_responsavel;
+        if (sealCargo) sealCargo.innerText = s7.cargo_assinante || inst.cargo_diretor;
+        if (sealUnicad) sealUnicad.innerText = s7.unicad_assinante || inst.registro_unicad || 'Homologação Unicad BACEN';
+        if (sealTimestamp) sealTimestamp.innerText = s7.data_assinatura || 'Aguardando confirmação eletrônica';
+        
+        const shaVal = s7.hash_sha256_relatorio || data.secao_8_exportacao_metadados.hash_sha256_integridade;
+        if (sealHash) sealHash.innerText = `Hash de Integridade SHA-256: ${shaVal}`;
+
+        const isAssinado = s7.status_assinatura === 'Assinado_Digitalmente';
+        if (sealStatus) {
+          sealStatus.innerText = isAssinado ? 'Assinado Digitalmente' : 'Assinatura Pendente';
+          sealStatus.className = `status-badge ${isAssinado ? 'atendido' : 'nao_atendido'}`;
+        }
+        if (sigBadge) {
+          sigBadge.innerText = isAssinado ? 'Assinado Digitalmente' : 'Pendente';
+          sigBadge.className = `domain-badge ${isAssinado ? 'atendido' : ''}`;
+        }
+
+        // 8. Metadados de Encerramento
+        const s8 = data.secao_8_exportacao_metadados;
+        const repFooter = document.getElementById('rep-meta-footer');
+        if (repFooter) {
+          repFooter.innerText = `Autenticação Documental: ${s8.hash_sha256_integridade} | Resoluções CMN 4.893 (Art. 8º) e 5.274/2025 | Custódia legal 5 anos (Art. 21).`;
+        }
 
       } catch (err) {
-        console.error("Erro ao carregar relatório anual:", err);
+        console.error("Erro ao carregar relatório anual consolidado:", err);
+        showToast("Erro ao carregar o relatório anual consolidado.", 'error');
       }
+    }
+
+    async function signAnnualReport() {
+      const parecerTexto = document.getElementById('rep-parecer-input').value.trim();
+      if (!parecerTexto) {
+        alert("Insira a manifestação conclusiva do Diretor Estatutário antes de assinar.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/relatorio_anual/parecer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            parecer_conclusivo: parecerTexto,
+            assinar_digitalmente: true,
+            ano_base: '2025'
+          })
+        });
+
+        if (res.ok) {
+          const resp = await res.json();
+          showToast("Relatório assinado eletronicamente com sucesso perante o BACEN!", 'success');
+          await loadAnnualReport();
+          await loadAuditoria();
+        } else {
+          showToast("Falha ao registrar assinatura eletrônica.", 'error');
+        }
+      } catch (err) {
+        showToast("Erro de rede ao assinar relatório.", 'error');
+      }
+    }
+
+    function exportAnnualReportJson() {
+      window.location.href = '/api/relatorio_anual/export/json';
+    }
+
+    function printAnnualReport() {
+      window.print();
     }
 
     // 9. Trilha de Auditoria

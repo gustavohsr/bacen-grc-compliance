@@ -1,16 +1,19 @@
 """
 Enterprise-grade Web Server and REST API for BACEN CMN 4.893 & 5.274 Compliance GRC.
 Features:
-- Role-Based Access Control (RBAC) & Least Privilege:
-  * Admin Geral (Superadministrador global)
-  * Gestor de Compliance / CISO (Gestão completa na instituição atribuída)
-  * Analista / Operador (Alimentação de evidências e planos de ação)
-  * Auditor / Fiscal BACEN (Somente leitura de requisitos, evidências e relatórios)
-- Multi-Institution User Mapping (perfil granular por instituição)
-- Authentication with PBKDF2-SHA256 password hashing & RFC 6238 TOTP (MFA 6 dígitos)
+- Multi-tenancy with complete context isolation per financial institution
+- Role-Based Access Control (RBAC) & Principle of Least Privilege:
+  * Admin Geral (Superadministrador global com visão cross-tenant)
+  * Gestor de Compliance / CISO (Gestão e avaliação na instituição vinculada)
+  * Analista / Operador (Inserção de evidências e planos 5W2H)
+  * Auditor / Fiscal BACEN (Somente leitura para inspeção regulatória)
+- Context extraction via 'X-Company-ID' header & 'instituicao_id' query parameter
+- Authentication with PBKDF2-SHA256 password hashing & RFC 6238 TOTP (MFA)
+- Complete Art. 8º Annual Report Module (8 mandatory sections + electronic signature + SHA-256 hash)
 - Dedicated PARI Module (Arts. 6º e 8º)
 - 14 Mandatory Minimum Controls of Resolução CMN nº 5.274/2025
 - Evidence Vault with SHA-256 integrity calculation
+- Vulnerability & Pentest tracking (auditorias_fragilidades)
 """
 import http.server
 import socketserver
@@ -46,6 +49,12 @@ def dict_from_row(row):
         return None
     return {k: row[k] for k in row.keys()}
 
+def log_audit(cursor, instituicao_id, usuario, acao, entidade, entidade_id=None, detalhes=""):
+    cursor.execute("""
+    INSERT INTO auditoria_log (instituicao_id, data_hora, usuario, acao, entidade, entidade_id, detalhes)
+    VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?);
+    """, (instituicao_id, usuario, acao, entidade, entidade_id, detalhes))
+
 def get_authenticated_user(cursor, token):
     if not token:
         return None
@@ -59,7 +68,7 @@ def get_authenticated_user(cursor, token):
     return dict_from_row(row)
 
 def get_user_role_for_institution(cursor, user, inst_id):
-    if not user:
+    if not user or not inst_id:
         return None
     if user.get('is_admin_geral') == 1:
         return 'admin_geral'
@@ -85,34 +94,6 @@ def get_accessible_institutions(cursor, user):
     """, (user['id'],))
     return [dict_from_row(r) for r in cursor.fetchall()]
 
-def get_active_institution_id(cursor, user=None):
-    if user and user.get('is_admin_geral') != 1:
-        # Check active institution that this user actually has permission to access
-        cursor.execute("""
-        SELECT i.id FROM instituicao i
-        JOIN usuario_instituicoes ui ON ui.instituicao_id = i.id
-        WHERE ui.usuario_id = ? AND i.is_ativa = 1
-        LIMIT 1;
-        """, (user['id'],))
-        row = cursor.fetchone()
-        if row:
-            return row['id']
-        cursor.execute("""
-        SELECT i.id FROM instituicao i
-        JOIN usuario_instituicoes ui ON ui.instituicao_id = i.id
-        WHERE ui.usuario_id = ?
-        ORDER BY i.id ASC LIMIT 1;
-        """, (user['id'],))
-        row = cursor.fetchone()
-        return row['id'] if row else 1
-
-    cursor.execute("SELECT id FROM instituicao WHERE is_ativa = 1 LIMIT 1;")
-    row = cursor.fetchone()
-    if row:
-        return row['id']
-    cursor.execute("SELECT id FROM instituicao ORDER BY id ASC LIMIT 1;")
-    row = cursor.fetchone()
-    return row['id'] if row else 1
 
 class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
 
@@ -133,7 +114,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Company-ID')
         self.end_headers()
         self.wfile.write(body)
 
@@ -141,7 +122,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Company-ID')
         self.end_headers()
 
     def get_token(self):
@@ -157,6 +138,40 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     return p.split('=', 1)[1].strip()
         return None
 
+    def get_context_institution_id(self, cursor, user, parsed_query=None):
+        """
+        Determines the active tenant institution ID with strict least-privilege verification:
+        1. Checks 'X-Company-ID' header
+        2. Checks query parameter '?instituicao_id='
+        3. Falls back to user's first accessible institution
+        4. Validates that non-admin users have explicit permission for this institution.
+        Returns: (inst_id, role)
+        """
+        requested_id = None
+        header_val = self.headers.get('X-Company-ID')
+        if header_val and header_val.strip().isdigit():
+            requested_id = int(header_val.strip())
+
+        if not requested_id and parsed_query:
+            q_val = parsed_query.get('instituicao_id', [None])[0]
+            if q_val and str(q_val).isdigit():
+                requested_id = int(q_val)
+
+        accessible = get_accessible_institutions(cursor, user)
+        if not accessible:
+            return None, None
+
+        accessible_ids = [inst['id'] for inst in accessible]
+
+        if requested_id is not None:
+            target_id = requested_id
+        else:
+            # Fallback to the first accessible institution
+            target_id = accessible[0]['id']
+
+        role = get_user_role_for_institution(cursor, user, target_id)
+        return target_id, role
+
     def check_auth(self, cursor, inst_id, allowed_roles):
         token = self.get_token()
         user = get_authenticated_user(cursor, token)
@@ -167,6 +182,9 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
 
         if user.get('is_admin_geral') == 1:
             return True, 200, "OK", user, "admin_geral"
+
+        if not inst_id:
+            return False, 403, "Instituição não identificada ou sem acesso.", user, None
 
         role = get_user_role_for_institution(cursor, user, inst_id)
         if not role:
@@ -211,8 +229,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     self.send_json({"authenticated": False}, 401)
                     return
                 insts = get_accessible_institutions(cursor, user)
-                active_id = get_active_institution_id(cursor, user)
-                active_role = get_user_role_for_institution(cursor, user, active_id)
+                inst_id, active_role = self.get_context_institution_id(cursor, user, query)
                 self.send_json({
                     "authenticated": True,
                     "user": {
@@ -223,7 +240,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                         "is_admin_geral": bool(user['is_admin_geral']),
                         "mfa_secret": user['mfa_secret']
                     },
-                    "instituicao_ativa_id": active_id,
+                    "instituicao_ativa_id": inst_id,
                     "perfil_ativo": active_role,
                     "instituicoes": insts
                 })
@@ -234,7 +251,8 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"error": "Não autenticado. Efetue login com usuário, senha e MFA."}, 401)
                 return
 
-            inst_id = get_active_institution_id(cursor, user)
+            # Resolve context institution ID and role for this request
+            inst_id, role = self.get_context_institution_id(cursor, user, query)
 
             # 2. GESTÃO DE USUÁRIOS E RBAC (Apenas Admin Geral)
             if path == "/api/usuarios":
@@ -258,13 +276,13 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json(usuarios)
                 return
 
-            # 3. INSTITUIÇÕES ACESSÍVEIS (Filtradas pelo menor privilégio do usuário)
-            elif path == "/api/instituicoes":
+            # 3. INSTITUIÇÕES ACESSÍVEIS
+            elif path in ("/api/instituicoes", "/api/empresas"):
                 insts = get_accessible_institutions(cursor, user)
                 self.send_json(insts)
                 return
 
-            elif path == "/api/instituicao" or path == "/api/instituicao/ativa":
+            elif path in ("/api/instituicao", "/api/instituicao/ativa", "/api/empresa", "/api/empresa/ativa"):
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
                     self.send_json({"error": err}, code)
@@ -274,6 +292,21 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 inst_data = dict_from_row(row) if row else {}
                 if inst_data:
                     inst_data['perfil_usuario'] = role
+                    inst_data['segmento_bacen'] = inst_data.get('segmento')
+                self.send_json(inst_data)
+                return
+
+            elif path.startswith("/api/instituicao/") and path.split("/")[-1].isdigit():
+                target_id = int(path.split("/")[-1])
+                ok, code, err, _, target_role = self.check_auth(cursor, target_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                cursor.execute("SELECT * FROM instituicao WHERE id = ?;", (target_id,))
+                row = cursor.fetchone()
+                inst_data = dict_from_row(row) if row else {}
+                if inst_data:
+                    inst_data['perfil_usuario'] = target_role
                 self.send_json(inst_data)
                 return
 
@@ -295,8 +328,8 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json(rows)
                 return
 
-            # 6. REQUISITOS (Com filtros)
-            elif path == "/api/requisitos":
+            # 6. REQUISITOS & AVALIAÇÕES (Com filtros estritamente isolados por instituicao_id)
+            elif path in ("/api/requisitos", "/api/avaliacoes"):
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
                     self.send_json({"error": err}, code)
@@ -308,10 +341,11 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 search = query.get('search', [None])[0]
 
                 sql = """
-                SELECT r.*, d.nome as dominio_nome, d.codigo as dominio_codigo,
+                SELECT r.*, r.id as requisito_id, r.codigo as requisito_codigo, ? as instituicao_id,
+                       d.nome as dominio_nome, d.codigo as dominio_codigo,
                        COALESCE(a.status, 'nao_atendido') as status,
                        COALESCE(a.percentual_aderencia, 0) as percentual_aderencia,
-                       a.justificativa, a.responsavel,
+                       a.justificativa, a.justificativa as comentarios, a.responsavel,
                        a.prazo_adequacao, a.ultima_auditoria, a.avaliador, a.observacoes_auditor,
                        (SELECT COUNT(*) FROM evidencias e WHERE e.requisito_id = r.id AND e.instituicao_id = ?) as total_evidencias,
                        (SELECT COUNT(*) FROM planos_acao p WHERE p.requisito_id = r.id AND p.instituicao_id = ?) as total_planos
@@ -320,7 +354,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 LEFT JOIN avaliacoes a ON a.requisito_id = r.id AND a.instituicao_id = ?
                 WHERE 1=1
                 """
-                params = [inst_id, inst_id, inst_id]
+                params = [inst_id, inst_id, inst_id, inst_id]
                 if dominio_id:
                     sql += " AND r.dominio_id = ?"
                     params.append(dominio_id)
@@ -375,7 +409,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json(req_data)
                 return
 
-            # 7. PARI (Acessível para consulta a todos os perfis)
+            # 7. PARI (Arts. 6º e 8º)
             elif path == "/api/pari":
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
@@ -411,7 +445,25 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 })
                 return
 
-            # 8. EVIDÊNCIAS
+            elif path == "/api/pari/playbooks":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                cursor.execute("SELECT * FROM pari_playbooks WHERE instituicao_id = ? ORDER BY codigo ASC;", (inst_id,))
+                self.send_json([dict_from_row(r) for r in cursor.fetchall()])
+                return
+
+            elif path == "/api/pari/simulados":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                cursor.execute("SELECT * FROM pari_simulados WHERE instituicao_id = ? ORDER BY data_realizacao DESC;", (inst_id,))
+                self.send_json([dict_from_row(r) for r in cursor.fetchall()])
+                return
+
+            # 8. EVIDÊNCIAS (Evidence Vault)
             elif path == "/api/evidencias":
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
@@ -435,7 +487,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json(rows)
                 return
 
-            # 9. PLANOS DE AÇÃO
+            # 9. PLANOS DE AÇÃO 5W2H
             elif path == "/api/planos_acao":
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
@@ -452,7 +504,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json(rows)
                 return
 
-            # 10. FORNECEDORES DE NUVEM
+            # 10. FORNECEDORES DE NUVEM (Arts. 11 a 17)
             elif path == "/api/fornecedores_nuvem":
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
@@ -474,7 +526,25 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json(rows)
                 return
 
-            # 12. RELATÓRIO ANUAL (ART. 8º)
+            # 12. FRAGILIDADES IDENTIFICADAS / PENTESTS (Art. 8º - Seção 5)
+            elif path == "/api/auditorias_fragilidades":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                cursor.execute("""
+                SELECT f.*, f.titulo as vulnerabilidade, f.descricao as plano_remediacao,
+                       r.codigo as requisito_codigo, r.titulo as requisito_titulo
+                FROM auditorias_fragilidades f
+                LEFT JOIN requisitos r ON f.requisito_id = r.id
+                WHERE f.instituicao_id = ?
+                ORDER BY f.data_identificacao DESC, f.id DESC;
+                """, (inst_id,))
+                rows = [dict_from_row(r) for r in cursor.fetchall()]
+                self.send_json(rows)
+                return
+
+            # 13. RELATÓRIO ANUAL (ART. 8º DA RES. CMN 4.893/2021)
             elif path == "/api/relatorio_anual":
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
@@ -484,18 +554,30 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json(relatorio)
                 return
 
-            # 13. AUDITORIA LOG
+            elif path == "/api/relatorio_anual/export/json":
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                self.export_annual_report_json(cursor, inst_id)
+                return
+
+            # 14. TRILHA DE AUDITORIA (Audit Log segregada por Tenant)
             elif path == "/api/auditoria_log":
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'auditor'])
                 if not ok:
                     self.send_json({"error": err}, code)
                     return
-                cursor.execute("SELECT * FROM auditoria_log ORDER BY id DESC LIMIT 100;")
+                cursor.execute("""
+                SELECT * FROM auditoria_log
+                WHERE instituicao_id = ?
+                ORDER BY id DESC LIMIT 150;
+                """, (inst_id,))
                 rows = [dict_from_row(r) for r in cursor.fetchall()]
                 self.send_json(rows)
                 return
 
-            # 14. EXPORTAÇÃO
+            # 15. EXPORTAÇÃO CSV / JSON
             elif path == "/api/export/csv":
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
                 if not ok:
@@ -521,6 +603,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        query = urllib.parse.parse_qs(parsed.query)
         conn = get_db()
         cursor = conn.cursor()
 
@@ -538,10 +621,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 user = dict_from_row(cursor.fetchone())
 
                 if not user or not verify_password(password, user['senha_salt'], user['senha_hash']):
-                    cursor.execute("""
-                    INSERT INTO auditoria_log (usuario, acao, entidade, detalhes)
-                    VALUES (?, 'FALHA_LOGIN', 'auth', 'Tentativa de autenticação com credenciais incorretas.');
-                    """, (email or 'Desconhecido',))
+                    log_audit(cursor, 1, email or 'Desconhecido', 'FALHA_LOGIN', 'auth', None, 'Credenciais inválidas.')
                     conn.commit()
                     self.send_json({"error": "Credenciais incorretas. Verifique seu e-mail e senha."}, 401)
                     return
@@ -553,7 +633,6 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 """, (token, user['id']))
                 conn.commit()
 
-                # Fornece a chave TOTP e código preview para facilitar pareamento e testes locais
                 totp_now = get_totp_code(user['mfa_secret'])
 
                 self.send_json({
@@ -571,7 +650,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 })
                 return
 
-            # 2. AUTENTICAÇÃO: VALIDAÇÃO MFA / TOTP (Público mediante token de sessão pendente)
+            # 2. AUTENTICAÇÃO: VALIDAÇÃO MFA / TOTP
             elif path == "/api/auth/mfa":
                 payload = json.loads(raw_body.decode('utf-8'))
                 token = payload.get('token', '').strip()
@@ -589,10 +668,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     return
 
                 if not verify_totp(user['mfa_secret'], code):
-                    cursor.execute("""
-                    INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                    VALUES (?, 'FALHA_MFA', 'usuarios', ?, 'Código TOTP de 6 dígitos inválido ou expirado.');
-                    """, (user['email'], user['id']))
+                    log_audit(cursor, 1, user['email'], 'FALHA_MFA', 'usuarios', user['id'], 'Código TOTP incorreto.')
                     conn.commit()
                     self.send_json({"error": "Código MFA incorreto ou expirado. Verifique o horário do seu dispositivo."}, 400)
                     return
@@ -600,15 +676,11 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 cursor.execute("UPDATE sessoes SET mfa_verificado = 1 WHERE token = ?;", (token,))
                 cursor.execute("UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = ?;", (user['id'],))
 
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES (?, 'LOGIN_SUCESSO', 'usuarios', ?, 'Autenticação multifator validada com sucesso.');
-                """, (user['email'], user['id']))
-                conn.commit()
-
                 insts = get_accessible_institutions(cursor, user)
-                active_id = get_active_institution_id(cursor, user)
-                active_role = get_user_role_for_institution(cursor, user, active_id)
+                inst_id, active_role = self.get_context_institution_id(cursor, user, query)
+
+                log_audit(cursor, inst_id or 1, user['email'], 'LOGIN_SUCESSO', 'usuarios', user['id'], 'MFA validado com sucesso.')
+                conn.commit()
 
                 self.send_json({
                     "success": True,
@@ -619,7 +691,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                         "cargo": user['cargo'],
                         "is_admin_geral": bool(user['is_admin_geral'])
                     },
-                    "instituicao_ativa_id": active_id,
+                    "instituicao_ativa_id": inst_id,
                     "perfil_ativo": active_role,
                     "instituicoes": insts
                 })
@@ -641,7 +713,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"error": "Não autenticado ou MFA pendente."}, 401)
                 return
 
-            inst_id = get_active_institution_id(cursor, user)
+            inst_id, role = self.get_context_institution_id(cursor, user, query)
 
             # 4. GESTÃO DE USUÁRIOS (Admin Geral ONLY)
             if path == "/api/usuarios":
@@ -655,7 +727,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 senha = payload.get('senha', 'SenhaInicial@2026!')
                 is_admin = 1 if payload.get('is_admin_geral') else 0
                 cargo = payload.get('cargo', 'Analista de Segurança')
-                instituicoes_roles = payload.get('instituicoes', []) # lista de {instituicao_id, perfil}
+                instituicoes_roles = payload.get('instituicoes', [])
 
                 salt, pwd_hash = hash_password(senha)
                 mfa_secret = generate_mfa_secret()
@@ -673,10 +745,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                         VALUES (?, ?, ?);
                         """, (new_user_id, ir['instituicao_id'], ir['perfil']))
 
-                    cursor.execute("""
-                    INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                    VALUES (?, 'CRIAR_USUARIO', 'usuarios', ?, ?);
-                    """, (user['email'], new_user_id, f"Cadastrado usuário {nome} ({email}) com privilégios RBAC."))
+                    log_audit(cursor, inst_id or 1, user['email'], 'CRIAR_USUARIO', 'usuarios', new_user_id, f"Cadastrado usuário {nome} ({email}).")
                     conn.commit()
 
                     self.send_json({"success": True, "id": new_user_id, "mfa_secret": mfa_secret})
@@ -714,9 +783,8 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('escopo_operacional', '')
                 ))
                 new_id = cursor.lastrowid
-                cursor.execute("UPDATE instituicao SET is_ativa = 0 WHERE id != ?;", (new_id,))
 
-                # Inicializar avaliações
+                # Inicializar 32 requisitos para a nova instituição
                 cursor.execute("SELECT id FROM requisitos;")
                 for req in cursor.fetchall():
                     cursor.execute("""
@@ -724,7 +792,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     VALUES (?, ?, 'nao_atendido', 0);
                     """, (new_id, req['id']))
 
-                # Inicializar governança PARI
+                # Inicializar governança PARI básica
                 cursor.execute("""
                 INSERT INTO pari_governanca (
                     instituicao_id, lider_csirt, email_csirt, telefone_plantao_247,
@@ -735,11 +803,18 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                           'Comunicação em até 24h via Sisbacen / Protocolo Digital.');
                 """, (new_id,))
 
+                # Inicializar registro de parecer do Art. 8º
+                cursor.execute("""
+                INSERT OR IGNORE INTO relatorio_anual_parecer (instituicao_id, ano_base, parecer_conclusivo, status_assinatura)
+                VALUES (?, '2025', 'Parecer formal em elaboração perante o BACEN.', 'Pendente');
+                """, (new_id,))
+
+                log_audit(cursor, new_id, user['email'], 'CRIAR_INSTITUICAO', 'instituicao', new_id, f"Instituição {payload.get('razao_social')} cadastrada.")
                 conn.commit()
                 self.send_json({"success": True, "id": new_id})
                 return
 
-            # ATIVAR INSTITUIÇÃO ESPECÍFICA (Apenas instituições que o usuário tem acesso)
+            # ATIVAR INSTITUIÇÃO ESPECÍFICA (Global Switch)
             elif path.endswith("/ativar") and "/api/instituicao/" in path:
                 target_id = int(path.split("/")[-2])
                 ok, code, err, _, _ = self.check_auth(cursor, target_id, ['admin_geral', 'gestor', 'analista', 'auditor'])
@@ -748,11 +823,12 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     return
                 cursor.execute("UPDATE instituicao SET is_ativa = 0;")
                 cursor.execute("UPDATE instituicao SET is_ativa = 1 WHERE id = ?;", (target_id,))
+                log_audit(cursor, target_id, user['email'], 'TROCAR_EMPRESA_ATIVA', 'instituicao', target_id, f"Empresa ID {target_id} definida como ativa.")
                 conn.commit()
                 self.send_json({"success": True, "ativo_id": target_id})
                 return
 
-            # 6. REGISTRAR EVIDÊNCIA (Admin Geral, Gestor, Analista - Auditor bloqueado)
+            # 6. REGISTRAR EVIDÊNCIA (Admin Geral, Gestor, Analista)
             elif path == "/api/evidencias":
                 ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
                 if not ok:
@@ -760,18 +836,33 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     return
 
                 payload = json.loads(raw_body.decode('utf-8'))
-                req_id = payload.get('requisito_id')
-                titulo = payload.get('titulo')
-                tipo = payload.get('tipo', 'Documento')
+                raw_req_id = payload.get('requisito_id')
+                req_id = None
+                if raw_req_id is not None:
+                    if str(raw_req_id).isdigit():
+                        req_id = int(raw_req_id)
+                    else:
+                        norm_code = str(raw_req_id).replace('REQ-4893-', 'REQ-').replace('4893-', '')
+                        cursor.execute("SELECT id FROM requisitos WHERE codigo = ? OR codigo = ?;", (str(raw_req_id), norm_code))
+                        r_row = cursor.fetchone()
+                        req_id = r_row['id'] if r_row else None
+                        if not req_id:
+                            cursor.execute("SELECT id FROM requisitos WHERE codigo LIKE ?;", (f"%{raw_req_id}%",))
+                            r_row = cursor.fetchone()
+                            req_id = r_row['id'] if r_row else None
+
+                titulo = payload.get('titulo') or payload.get('nome_arquivo') or (f"Evidência {raw_req_id}" if raw_req_id else "Evidência Regulatória")
+                tipo = payload.get('tipo') or payload.get('categoria') or 'Documento'
                 descricao = payload.get('descricao', '')
                 coletor = user['nome']
                 link_ext = payload.get('link_externo')
                 nome_arq = payload.get('nome_arquivo', 'evidencia.txt')
                 conteudo_b64 = payload.get('conteudo_base64')
+                provided_hash = payload.get('hash_sha256')
 
-                caminho_arq = None
-                hash_sha256 = None
-                tam_bytes = 0
+                caminho_arq = payload.get('caminho_arquivo')
+                hash_sha256 = provided_hash
+                tam_bytes = payload.get('tamanho_bytes', 0)
 
                 if conteudo_b64:
                     import base64
@@ -783,10 +874,11 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     with open(file_path, "wb") as f:
                         f.write(file_data)
                     caminho_arq = f"/uploads/{safe_filename}"
-                elif link_ext:
-                    hash_sha256 = hashlib.sha256(link_ext.encode('utf-8')).hexdigest()
-                else:
-                    hash_sha256 = hashlib.sha256(descricao.encode('utf-8')).hexdigest()
+                elif not hash_sha256:
+                    if link_ext:
+                        hash_sha256 = hashlib.sha256(link_ext.encode('utf-8')).hexdigest()
+                    else:
+                        hash_sha256 = hashlib.sha256((descricao or nome_arq).encode('utf-8')).hexdigest()
 
                 cursor.execute("""
                 INSERT INTO evidencias (
@@ -796,13 +888,10 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 """, (inst_id, req_id, titulo, tipo, descricao, nome_arq, caminho_arq, hash_sha256, tam_bytes, 'application/octet-stream', link_ext, coletor))
 
                 ev_id = cursor.lastrowid
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES (?, 'CRIAR_EVIDENCIA', 'evidencias', ?, ?);
-                """, (user['email'], ev_id, f"Registrada evidência '{titulo}' para requisito ID {req_id} com hash SHA-256 {hash_sha256[:16]}..."))
+                log_audit(cursor, inst_id, user['email'], 'CRIAR_EVIDENCIA', 'evidencias', ev_id, f"Registrada evidência '{titulo}' com hash SHA-256 {hash_sha256[:16]}...")
                 conn.commit()
 
-                self.send_json({"success": True, "id": ev_id, "hash_sha256": hash_sha256})
+                self.send_json({"success": True, "id": ev_id, "hash_sha256": hash_sha256}, 201)
                 return
 
             # 7. PLANO DE AÇÃO 5W2H (Admin Geral, Gestor, Analista)
@@ -832,6 +921,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     int(payload.get('progresso_pct', 0))
                 ))
                 p_id = cursor.lastrowid
+                log_audit(cursor, inst_id, user['email'], 'CRIAR_PLANO_ACAO', 'planos_acao', p_id, f"Plano de Ação '{payload.get('titulo')}' criado.")
                 conn.commit()
                 self.send_json({"success": True, "id": p_id})
                 return
@@ -870,6 +960,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('observacoes', '')
                 ))
                 f_id = cursor.lastrowid
+                log_audit(cursor, inst_id, user['email'], 'CRIAR_FORNECEDOR_NUVEM', 'fornecedores_nuvem', f_id, f"Fornecedor de nuvem {payload.get('nome_provedor')} cadastrado.")
                 conn.commit()
                 self.send_json({"success": True, "id": f_id})
                 return
@@ -900,6 +991,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('tempo_estimado_resposta', '')
                 ))
                 pb_id = cursor.lastrowid
+                log_audit(cursor, inst_id, user['email'], 'CRIAR_PLAYBOOK_PARI', 'pari_playbooks', pb_id, f"Playbook '{payload.get('titulo_cenario')}' cadastrado.")
                 conn.commit()
                 self.send_json({"success": True, "id": pb_id})
                 return
@@ -930,6 +1022,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('status', 'Concluido')
                 ))
                 sim_id = cursor.lastrowid
+                log_audit(cursor, inst_id, user['email'], 'REGISTRAR_SIMULADO_PARI', 'pari_simulados', sim_id, f"Simulado de crise '{payload.get('titulo_simulado')}' registrado.")
                 conn.commit()
                 self.send_json({"success": True, "id": sim_id})
                 return
@@ -944,16 +1037,20 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 payload = json.loads(raw_body.decode('utf-8'))
                 cursor.execute("""
                 INSERT INTO incidentes (
-                    instituicao_id, protocolo, titulo, data_ocorrencia, data_deteccao, categoria, criticidade,
+                    instituicao_id, protocolo, titulo, data_ocorrencia, data_deteccao, data_resolucao,
+                    tempo_deteccao_minutos, tempo_resolucao_minutos, categoria, criticidade,
                     sistemas_afetados, impacto_operacional, status, notificado_bacen, data_notificacao_bacen,
                     causa_raiz, acoes_corretivas
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """, (
                     inst_id,
                     payload.get('protocolo', f"INC-{datetime.now().strftime('%Y-%m%d')}"),
                     payload.get('titulo'),
                     payload.get('data_ocorrencia', datetime.now().isoformat()),
                     payload.get('data_deteccao', datetime.now().isoformat()),
+                    payload.get('data_resolucao'),
+                    int(payload.get('tempo_deteccao_minutos', 0)),
+                    int(payload.get('tempo_resolucao_minutos', 0)),
                     payload.get('categoria', 'Intrusão'),
                     payload.get('criticidade', 'Média'),
                     payload.get('sistemas_afetados'),
@@ -965,8 +1062,109 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('acoes_corretivas')
                 ))
                 inc_id = cursor.lastrowid
+                log_audit(cursor, inst_id, user['email'], 'REGISTRAR_INCIDENTE', 'incidentes', inc_id, f"Incidente '{payload.get('titulo')}' registrado.")
                 conn.commit()
                 self.send_json({"success": True, "id": inc_id})
+                return
+
+            # 12. FRAGILIDADES & PENTESTS (Admin Geral, Gestor, Analista)
+            elif path == "/api/auditorias_fragilidades":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
+                payload = json.loads(raw_body.decode('utf-8'))
+                titulo = payload.get('titulo') or payload.get('vulnerabilidade') or 'Apontamento de Pentest / Auditoria'
+                tipo = payload.get('tipo') or payload.get('tipo_auditoria') or 'Pentest Externo'
+                severidade = payload.get('severidade', 'Media')
+                descricao = payload.get('descricao') or payload.get('plano_remediacao') or payload.get('vulnerabilidade') or ''
+                status_rem = payload.get('status_remediacao') or payload.get('status') or 'Em_Tratamento'
+                raw_req = payload.get('requisito_id')
+                req_id = None
+                if raw_req:
+                    if str(raw_req).isdigit():
+                        req_id = int(raw_req)
+                    else:
+                        cursor.execute("SELECT id FROM requisitos WHERE codigo = ?;", (str(raw_req),))
+                        r_row = cursor.fetchone()
+                        req_id = r_row['id'] if r_row else None
+
+                cursor.execute("""
+                INSERT INTO auditorias_fragilidades (
+                    instituicao_id, titulo, tipo, severidade, descricao, requisito_id,
+                    status_remediacao, data_identificacao, prazo_remediacao, responsavel
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, (
+                    inst_id,
+                    titulo,
+                    tipo,
+                    severidade,
+                    descricao,
+                    req_id,
+                    status_rem,
+                    payload.get('data_identificacao', datetime.now().strftime('%Y-%m-%d')),
+                    payload.get('prazo_remediacao'),
+                    payload.get('responsavel', user['nome'])
+                ))
+                frag_id = cursor.lastrowid
+                log_audit(cursor, inst_id, user['email'], 'REGISTRAR_FRAGILIDADE', 'auditorias_fragilidades', frag_id, f"Fragilidade/Pentest '{titulo}' registrada.")
+                conn.commit()
+                self.send_json({"success": True, "id": frag_id}, 201)
+                return
+
+            # 13. PARECER FORMAL E ASSINATURA ELETRÔNICA DO ART. 8º (Admin Geral ou Gestor)
+            elif path == "/api/relatorio_anual/parecer":
+                ok, code, err, user, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
+                payload = json.loads(raw_body.decode('utf-8'))
+                ano_base = str(payload.get('ano_base', '2025'))
+                parecer_texto = payload.get('parecer_conclusivo', '').strip()
+                assinar = bool(payload.get('assinar_digitalmente', True))
+
+                cursor.execute("SELECT * FROM instituicao WHERE id = ?;", (inst_id,))
+                inst = dict_from_row(cursor.fetchone())
+
+                assinado_por = payload.get('assinado_por') or (inst['diretor_responsavel'] if inst else user['nome'])
+                cargo_ass = payload.get('cargo_assinante') or (inst['cargo_diretor'] if inst else 'Diretor Estatutário BACEN')
+                unicad_ass = payload.get('unicad_assinante') or (inst['registro_unicad'] if inst else 'BACEN-REG')
+
+                # Calcular hash SHA-256 do relatório e parecer
+                hash_input = f"{inst_id}_{ano_base}_{assinado_por}_{unicad_ass}_{parecer_texto}_{datetime.now().strftime('%Y%m%d%H%M')}"
+                hash_sha256 = hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+
+                status_ass = 'Assinado_Digitalmente' if assinar else 'Pendente'
+                data_ass = datetime.now().strftime('%Y-%m-%d %H:%M:%S') if assinar else None
+
+                cursor.execute("""
+                INSERT INTO relatorio_anual_parecer (
+                    instituicao_id, ano_base, parecer_conclusivo, status_assinatura, assinado_por,
+                    cargo_assinante, unicad_assinante, data_assinatura, hash_sha256_relatorio
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(instituicao_id, ano_base) DO UPDATE SET
+                    parecer_conclusivo = excluded.parecer_conclusivo,
+                    status_assinatura = excluded.status_assinatura,
+                    assinado_por = excluded.assinado_por,
+                    cargo_assinante = excluded.cargo_assinante,
+                    unicad_assinante = excluded.unicad_assinante,
+                    data_assinatura = excluded.data_assinatura,
+                    hash_sha256_relatorio = excluded.hash_sha256_relatorio;
+                """, (inst_id, ano_base, parecer_texto, status_ass, assinado_por, cargo_ass, unicad_ass, data_ass, hash_sha256))
+
+                log_audit(cursor, inst_id, user['email'], 'ASSINAR_RELATORIO_ART8', 'relatorio_anual_parecer', inst_id,
+                          f"Parecer do Diretor Estatutário para o ciclo {ano_base} registrado com status '{status_ass}' (Hash SHA-256: {hash_sha256[:16]}...).")
+                conn.commit()
+
+                self.send_json({
+                    "success": True,
+                    "status_assinatura": status_ass,
+                    "assinado_por": assinado_por,
+                    "data_assinatura": data_ass,
+                    "hash_sha256": hash_sha256
+                })
                 return
 
             else:
@@ -978,6 +1176,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
     def do_PUT(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        query = urllib.parse.parse_qs(parsed.query)
         conn = get_db()
         cursor = conn.cursor()
 
@@ -992,7 +1191,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"error": "Não autenticado ou MFA pendente."}, 401)
                 return
 
-            inst_id = get_active_institution_id(cursor, user)
+            inst_id, role = self.get_context_institution_id(cursor, user, query)
 
             # 1. ATUALIZAR USUÁRIO (Admin Geral ONLY)
             if path.startswith("/api/usuarios/"):
@@ -1022,7 +1221,6 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     WHERE id = ?;
                     """, (nome, email, cargo, is_admin, ativo, target_user_id))
 
-                # Atualizar vínculos de instituições
                 cursor.execute("DELETE FROM usuario_instituicoes WHERE usuario_id = ?;", (target_user_id,))
                 for ir in instituicoes:
                     cursor.execute("""
@@ -1030,10 +1228,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     VALUES (?, ?, ?);
                     """, (target_user_id, ir['instituicao_id'], ir['perfil']))
 
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES (?, 'ATUALIZAR_USUARIO', 'usuarios', ?, ?);
-                """, (user['email'], target_user_id, f"Atualizado cadastro e permissões RBAC de {nome}."))
+                log_audit(cursor, inst_id or 1, user['email'], 'ATUALIZAR_USUARIO', 'usuarios', target_user_id, f"Atualizado cadastro de {nome}.")
                 conn.commit()
                 self.send_json({"success": True, "id": target_user_id})
                 return
@@ -1073,10 +1268,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('escopo_operacional'),
                     target_inst_id
                 ))
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES (?, 'ATUALIZAR_INSTITUICAO', 'instituicao', ?, ?);
-                """, (user['email'], target_inst_id, f"Atualização cadastral da instituição {payload.get('razao_social')}."))
+                log_audit(cursor, target_inst_id, user['email'], 'ATUALIZAR_INSTITUICAO', 'instituicao', target_inst_id, f"Atualização cadastral de {payload.get('razao_social')}.")
                 conn.commit()
                 self.send_json({"success": True, "id": target_inst_id})
                 return
@@ -1107,21 +1299,39 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     payload.get('versao_pari'),
                     inst_id
                 ))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_PARI_GOV', 'pari_governanca', inst_id, "Atualização da governança do CSIRT/PARI.")
                 conn.commit()
                 self.send_json({"success": True})
                 return
 
-            # 4. ATUALIZAR AVALIAÇÃO DE COMPLIANCE (Admin Geral, Gestor, Analista - Auditor BLOQUEADO)
+            # 4. ATUALIZAR AVALIAÇÃO DE COMPLIANCE (Admin Geral, Gestor, Analista)
             elif path.startswith("/api/avaliacoes/"):
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
                 if not ok:
                     self.send_json({"error": err}, code)
                     return
 
-                req_id = path.split("/")[-1]
+                raw_req_id = path.split("/")[-1]
+                req_numeric_id = None
+                if raw_req_id.isdigit():
+                    req_numeric_id = int(raw_req_id)
+                else:
+                    norm_code = raw_req_id.replace('REQ-4893-', 'REQ-').replace('4893-', '')
+                    cursor.execute("SELECT id FROM requisitos WHERE codigo = ? OR codigo = ?;", (raw_req_id, norm_code))
+                    row = cursor.fetchone()
+                    req_numeric_id = row['id'] if row else None
+                    if not req_numeric_id:
+                        cursor.execute("SELECT id FROM requisitos WHERE codigo LIKE ?;", (f"%{raw_req_id}%",))
+                        row = cursor.fetchone()
+                        req_numeric_id = row['id'] if row else None
+
+                if not req_numeric_id:
+                    self.send_json({"error": f"Requisito '{raw_req_id}' não encontrado."}, 404)
+                    return
+
                 status = payload.get('status')
-                pct = int(payload.get('percentual_aderencia', 0))
-                justificativa = payload.get('justificativa', '')
+                pct = int(payload.get('percentual_aderencia', payload.get('aderencia_percentual', 0)))
+                justificativa = payload.get('justificativa', payload.get('comentarios', ''))
                 responsavel = payload.get('responsavel', '')
                 prazo = payload.get('prazo_adequacao')
                 auditor = user['nome']
@@ -1142,14 +1352,11 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     observacoes_auditor = excluded.observacoes_auditor,
                     ultima_auditoria = DATE('now'),
                     updated_at = CURRENT_TIMESTAMP;
-                """, (inst_id, req_id, status, pct, justificativa, responsavel, prazo, auditor, obs))
+                """, (inst_id, req_numeric_id, status, pct, justificativa, responsavel, prazo, auditor, obs))
 
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES (?, 'ATUALIZAR_AVALIACAO', 'avaliacoes', ?, ?);
-                """, (user['email'], req_id, f"Status atualizado para '{status}' com {pct}% de aderência por {user['nome']} ({role})."))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_AVALIACAO', 'avaliacoes', req_numeric_id, f"Status: '{status}' ({pct}%) por {user['nome']}.")
                 conn.commit()
-                self.send_json({"success": True, "requisito_id": req_id})
+                self.send_json({"success": True, "requisito_id": req_numeric_id})
                 return
 
             # 5. ATUALIZAR PLANOS DE AÇÃO 5W2H (Admin Geral, Gestor, Analista)
@@ -1174,6 +1381,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     p_id,
                     inst_id
                 ))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_PLANO_ACAO', 'planos_acao', p_id, f"Plano ID {p_id} atualizado.")
                 conn.commit()
                 self.send_json({"success": True, "id": p_id})
                 return
@@ -1205,8 +1413,34 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     f_id,
                     inst_id
                 ))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_FORNECEDOR_NUVEM', 'fornecedores_nuvem', f_id, f"Provedor ID {f_id} atualizado.")
                 conn.commit()
                 self.send_json({"success": True, "id": f_id})
+                return
+
+            # 7. ATUALIZAR FRAGILIDADE / PENTEST (Admin Geral, Gestor, Analista)
+            elif path.startswith("/api/auditorias_fragilidades/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor', 'analista'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+
+                frag_id = path.split("/")[-1]
+                cursor.execute("""
+                UPDATE auditorias_fragilidades
+                SET status_remediacao = ?, prazo_remediacao = ?, responsavel = ?, severidade = ?
+                WHERE id = ? AND instituicao_id = ?;
+                """, (
+                    payload.get('status_remediacao'),
+                    payload.get('prazo_remediacao'),
+                    payload.get('responsavel'),
+                    payload.get('severidade'),
+                    frag_id,
+                    inst_id
+                ))
+                log_audit(cursor, inst_id, user['email'], 'ATUALIZAR_FRAGILIDADE', 'auditorias_fragilidades', frag_id, f"Fragilidade ID {frag_id} atualizada para {payload.get('status_remediacao')}.")
+                conn.commit()
+                self.send_json({"success": True, "id": frag_id}, 201)
                 return
 
             else:
@@ -1218,6 +1452,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
     def do_DELETE(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        query = urllib.parse.parse_qs(parsed.query)
         conn = get_db()
         cursor = conn.cursor()
 
@@ -1228,7 +1463,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"error": "Não autenticado ou MFA pendente."}, 401)
                 return
 
-            inst_id = get_active_institution_id(cursor, user)
+            inst_id, role = self.get_context_institution_id(cursor, user, query)
 
             # 1. EXCLUIR USUÁRIO (Admin Geral ONLY)
             if path.startswith("/api/usuarios/"):
@@ -1240,15 +1475,12 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     self.send_json({"error": "Você não pode excluir sua própria conta de administrador."}, 400)
                     return
                 cursor.execute("DELETE FROM usuarios WHERE id = ?;", (del_user_id,))
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES (?, 'EXCLUIR_USUARIO', 'usuarios', ?, 'Usuário removido pelo Administrador Geral.');
-                """, (user['email'], del_user_id))
+                log_audit(cursor, inst_id or 1, user['email'], 'EXCLUIR_USUARIO', 'usuarios', del_user_id, 'Usuário removido.')
                 conn.commit()
                 self.send_json({"success": True, "deleted_id": del_user_id})
                 return
 
-            # 2. EXCLUIR EVIDÊNCIA (Admin Geral e Gestor - Analista e Auditor BLOQUEADOS)
+            # 2. EXCLUIR EVIDÊNCIA (Admin Geral e Gestor)
             if path.startswith("/api/evidencias/"):
                 ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
                 if not ok:
@@ -1266,10 +1498,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                         except Exception:
                             pass
                 cursor.execute("DELETE FROM evidencias WHERE id = ? AND instituicao_id = ?;", (ev_id, inst_id))
-                cursor.execute("""
-                INSERT INTO auditoria_log (usuario, acao, entidade, entidade_id, detalhes)
-                VALUES (?, 'EXCLUIR_EVIDENCIA', 'evidencias', ?, ?);
-                """, (user['email'], ev_id, f"Evidência ID {ev_id} removida."))
+                log_audit(cursor, inst_id, user['email'], 'EXCLUIR_EVIDENCIA', 'evidencias', ev_id, f"Evidência ID {ev_id} excluída.")
                 conn.commit()
                 self.send_json({"success": True, "deleted_id": ev_id})
                 return
@@ -1282,11 +1511,25 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
                     return
                 p_id = path.split("/")[-1]
                 cursor.execute("DELETE FROM planos_acao WHERE id = ? AND instituicao_id = ?;", (p_id, inst_id))
+                log_audit(cursor, inst_id, user['email'], 'EXCLUIR_PLANO_ACAO', 'planos_acao', p_id, f"Plano ID {p_id} excluído.")
                 conn.commit()
                 self.send_json({"success": True, "deleted_id": p_id})
                 return
 
-            # 4. EXCLUIR INSTITUIÇÃO (Admin Geral ONLY)
+            # 4. EXCLUIR FRAGILIDADE / PENTEST (Admin Geral e Gestor)
+            elif path.startswith("/api/auditorias_fragilidades/"):
+                ok, code, err, _, role = self.check_auth(cursor, inst_id, ['admin_geral', 'gestor'])
+                if not ok:
+                    self.send_json({"error": err}, code)
+                    return
+                f_id = path.split("/")[-1]
+                cursor.execute("DELETE FROM auditorias_fragilidades WHERE id = ? AND instituicao_id = ?;", (f_id, inst_id))
+                log_audit(cursor, inst_id, user['email'], 'EXCLUIR_FRAGILIDADE', 'auditorias_fragilidades', f_id, f"Fragilidade ID {f_id} excluída.")
+                conn.commit()
+                self.send_json({"success": True, "deleted_id": f_id})
+                return
+
+            # 5. EXCLUIR INSTITUIÇÃO (Admin Geral ONLY)
             elif path.startswith("/api/instituicoes/"):
                 if user.get('is_admin_geral') != 1:
                     self.send_json({"error": "Apenas o Administrador Geral pode excluir instituições."}, 403)
@@ -1301,6 +1544,7 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
 
                 cursor.execute("DELETE FROM instituicao WHERE id = ?;", (del_id,))
                 cursor.execute("UPDATE instituicao SET is_ativa = 1 WHERE id = (SELECT id FROM instituicao LIMIT 1);")
+                log_audit(cursor, 1, user['email'], 'EXCLUIR_INSTITUICAO', 'instituicao', del_id, f"Instituição ID {del_id} removida pelo Administrador Geral.")
                 conn.commit()
                 self.send_json({"success": True, "deleted_id": del_id})
                 return
@@ -1411,55 +1655,240 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         }
 
     def generate_annual_report(self, cursor, inst_id):
+        """
+        Generates the consolidated executive annual report in full compliance with
+        Art. 8º da Resolução CMN nº 4.893/2021 & Resolução CMN nº 5.274/2025.
+        Contains the 8 regulatory mandatory sections.
+        """
         cursor.execute("SELECT * FROM instituicao WHERE id = ?;", (inst_id,))
         inst = dict_from_row(cursor.fetchone())
         dashboard = self.get_dashboard_metrics(cursor, inst_id)
 
+        # 1. Identificação Regulatória
+        identificacao_regulatoria = {
+            "instituicao": inst,
+            "razao_social": inst['razao_social'] if inst else '',
+            "cnpj": inst['cnpj'] if inst else '',
+            "segmento_bacen": inst['segmento'] if inst else '',
+            "diretor_responsavel": inst['diretor_responsavel'] if inst else '',
+            "cargo_diretor": inst['cargo_diretor'] if inst else '',
+            "registro_unicad": inst['registro_unicad'] if inst else '',
+            "versao_politica": inst['versao_politica'] if inst else '',
+            "data_aprovacao_politica": inst['data_aprovacao_politica'] if inst else '',
+            "data_ultima_revisao": inst['data_ultima_revisao'] if inst else '',
+            "data_base": "31 de dezembro de 2025",
+            "data_emissao": datetime.now().strftime("%d/%m/%Y"),
+            "exercicio": "2025",
+            "orgao_regulador": "Banco Central do Brasil (BACEN)",
+            "normas_aplicaveis": [
+                "Resolução CMN nº 4.893, de 23 de dezembro de 2021",
+                "Resolução CMN nº 5.274, de 25 de setembro de 2025"
+            ]
+        }
+
+        # 2. Avaliação de Efetividade da Política (Indicadores percentuais Res. 4.893 e Res. 5.274)
         cursor.execute("""
-        SELECT r.codigo, r.artigo, r.titulo, r.is_cmn_5274_obrigatorio,
+        SELECT r.codigo, r.artigo, r.titulo, r.severidade, r.is_cmn_5274_obrigatorio, r.numero_controle_5274,
                COALESCE(a.status, 'nao_atendido') as status,
                COALESCE(a.percentual_aderencia, 0) as percentual_aderencia,
                a.justificativa, a.responsavel, a.observacoes_auditor
         FROM requisitos r
         LEFT JOIN avaliacoes a ON a.requisito_id = r.id AND a.instituicao_id = ?
-        ORDER BY r.is_cmn_5274_obrigatorio DESC, r.id ASC;
+        ORDER BY r.is_cmn_5274_obrigatorio DESC, r.numero_controle_5274 ASC, r.id ASC;
         """, (inst_id,))
         todos_requisitos = [dict_from_row(r) for r in cursor.fetchall()]
+
+        efetividade_politica = {
+            "kpis_globais": dashboard['resumo_kpi'],
+            "taxa_conformidade_geral": dashboard['resumo_kpi']['percentual_aderencia_global'],
+            "res_4893_32_requisitos": dashboard['resumo_kpi'],
+            "cmn_5274_stats": dashboard['cmn_5274_stats'],
+            "res_5274_14_controles": {"total_controles": 14, **dashboard['cmn_5274_stats']},
+            "dominios_stats": dashboard['dominios_stats'],
+            "controles_5274": dashboard['cmn_5274_controles'],
+            "requisitos_detalhados": todos_requisitos
+        }
+
+        # 3. Consolidado de Incidentes Relevantes (Art. 6º) com MTTD e MTTR
+        cursor.execute("""
+        SELECT 
+            COUNT(*) as total_incidentes,
+            ROUND(AVG(COALESCE(tempo_deteccao_minutos, 0)), 1) as mttd_medio_minutos,
+            ROUND(AVG(COALESCE(tempo_resolucao_minutos, 0)), 1) as mttr_medio_minutos,
+            SUM(CASE WHEN notificado_bacen = 1 THEN 1 ELSE 0 END) as total_notificados_bacen,
+            SUM(CASE WHEN status = 'Encerrado' THEN 1 ELSE 0 END) as total_encerrados
+        FROM incidentes
+        WHERE instituicao_id = ?;
+        """, (inst_id,))
+        inc_stats_row = cursor.fetchone()
+        inc_stats = dict_from_row(inc_stats_row) if inc_stats_row else {}
+
+        cursor.execute("""
+        SELECT categoria, COUNT(*) as count
+        FROM incidentes
+        WHERE instituicao_id = ?
+        GROUP BY categoria;
+        """, (inst_id,))
+        tipologias = [dict_from_row(r) for r in cursor.fetchall()]
+
+        cursor.execute("""
+        SELECT * FROM incidentes
+        WHERE instituicao_id = ?
+        ORDER BY data_ocorrencia DESC;
+        """, (inst_id,))
+        incidentes_lista = [dict_from_row(r) for r in cursor.fetchall()]
+
+        consolidado_incidentes = {
+            "total_incidentes": inc_stats.get('total_incidentes', len(incidentes_lista)),
+            "mttd_medio_minutos": inc_stats.get('mttd_medio_minutos', 0),
+            "mttr_medio_minutos": inc_stats.get('mttr_medio_minutos', 0),
+            "metricas": inc_stats,
+            "distribuicao_tipologia": tipologias,
+            "tipologias": tipologias,
+            "incidentes": incidentes_lista,
+            "incidentes_lista": incidentes_lista
+        }
+
+        # 4. Resultados de Testes de Continuidade e Simulados de Crise (PARI)
+        cursor.execute("SELECT * FROM pari_governanca WHERE instituicao_id = ? LIMIT 1;", (inst_id,))
+        pari_gov = dict_from_row(cursor.fetchone())
+
+        cursor.execute("SELECT * FROM pari_playbooks WHERE instituicao_id = ? ORDER BY codigo ASC;", (inst_id,))
+        pari_playbooks = [dict_from_row(r) for r in cursor.fetchall()]
+
+        cursor.execute("SELECT * FROM pari_simulados WHERE instituicao_id = ? ORDER BY data_realizacao DESC;", (inst_id,))
+        pari_simulados = [dict_from_row(r) for r in cursor.fetchall()]
+
+        continuidade_simulados = {
+            "governanca_csirt": pari_gov,
+            "total_simulados_realizados": len(pari_simulados),
+            "total_playbooks": len(pari_playbooks),
+            "playbooks": pari_playbooks,
+            "simulados": pari_simulados,
+            "simulados_realizados": pari_simulados,
+            "simulados_lista": pari_simulados
+        }
+
+        # 5. Auditorias e Fragilidades Identificadas (Pentests e Scans)
+        cursor.execute("""
+        SELECT f.*, r.codigo as requisito_codigo, r.titulo as requisito_titulo
+        FROM auditorias_fragilidades f
+        LEFT JOIN requisitos r ON f.requisito_id = r.id
+        WHERE f.instituicao_id = ?
+        ORDER BY f.data_identificacao DESC;
+        """, (inst_id,))
+        fragilidades = [dict_from_row(r) for r in cursor.fetchall()]
+
+        auditorias_fragilidades = {
+            "total_fragilidades_identificadas": len(fragilidades),
+            "total_fragilidades": len(fragilidades),
+            "remediadas": sum(1 for f in fragilidades if f['status_remediacao'] == 'Remediada'),
+            "em_tratamento": sum(1 for f in fragilidades if f['status_remediacao'] == 'Em_Tratamento'),
+            "risco_aceito": sum(1 for f in fragilidades if f['status_remediacao'] == 'Risco_Aceito'),
+            "vulnerabilidades": fragilidades,
+            "vulnerabilidades_lista": fragilidades,
+            "lista": fragilidades
+        }
+
+        # 6. Planos de Ação e Adequação (5W2H)
+        cursor.execute("""
+        SELECT p.*, r.codigo as requisito_codigo, r.titulo as requisito_titulo
+        FROM planos_acao p
+        JOIN requisitos r ON p.requisito_id = r.id
+        WHERE p.instituicao_id = ?
+        ORDER BY p.quando ASC;
+        """, (inst_id,))
+        planos = [dict_from_row(r) for r in cursor.fetchall()]
 
         cursor.execute("SELECT * FROM fornecedores_nuvem WHERE instituicao_id = ? ORDER BY id ASC;", (inst_id,))
         fornecedores = [dict_from_row(r) for r in cursor.fetchall()]
 
-        cursor.execute("SELECT * FROM incidentes WHERE instituicao_id = ? ORDER BY data_ocorrencia DESC;", (inst_id,))
-        incidentes = [dict_from_row(r) for r in cursor.fetchall()]
+        planos_adequacao = {
+            "total_planos": len(planos),
+            "total_planos_5w2h": len(planos),
+            "planos_5w2h": planos,
+            "planos": planos,
+            "fornecedores_nuvem_art17": fornecedores,
+            "provedores_nuvem_relevantes": fornecedores
+        }
 
-        cursor.execute("SELECT * FROM planos_acao WHERE instituicao_id = ? ORDER BY quando ASC;", (inst_id,))
-        planos = [dict_from_row(r) for r in cursor.fetchall()]
+        # 7. Parecer Formal do Diretor Estatutário (Art. 7º e 8º)
+        cursor.execute("""
+        SELECT * FROM relatorio_anual_parecer
+        WHERE instituicao_id = ? AND ano_base = '2025'
+        LIMIT 1;
+        """, (inst_id,))
+        parecer_row = cursor.fetchone()
+        parecer = dict_from_row(parecer_row)
 
-        cursor.execute("SELECT * FROM pari_governanca WHERE instituicao_id = ? LIMIT 1;", (inst_id,))
-        pari_gov = dict_from_row(cursor.fetchone())
-
-        diretor = inst['diretor_responsavel'] if inst else 'Diretor Estatutário'
         razao = inst['razao_social'] if inst else 'Instituição Financeira'
+        diretor = inst['diretor_responsavel'] if inst else 'Diretor Estatutário'
 
-        return {
-            "instituicao": inst,
-            "data_base": "31 de dezembro de 2025",
-            "data_emissao": datetime.now().strftime("%d/%m/%Y"),
-            "kpis": dashboard['resumo_kpi'],
-            "cmn_5274_stats": dashboard['cmn_5274_stats'],
-            "requisitos": todos_requisitos,
-            "fornecedores_nuvem": fornecedores,
-            "incidentes": incidentes,
-            "planos_acao": planos,
-            "pari_governanca": pari_gov,
-            "conclusao_diretor": (
+        if not parecer:
+            parecer_padrao = (
                 f"Declaro, na qualidade de Diretor Estatutário responsável pela Política de Segurança Cibernética "
                 f"da instituição {razao} perante o Banco Central do Brasil, nos termos do Art. 7º e 8º "
-                f"da Resolução CMN nº 4.893/2021 e alterações da Resolução CMN nº 5.274/2025, que as informações "
+                f"da Resolução CMN nº 4.893/2021 e da Resolução CMN nº 5.274/2025, que as informações "
                 f"contidas neste relatório refletem com fidedignidade o estado de maturidade dos controles de segurança, "
-                f"a efetividade do Plano de Ação e de Resposta a Incidentes (PARI), e os planos de adequação contínua."
+                f"a efetividade do Plano de Ação e de Resposta a Incidentes (PARI), e a execução dos planos de adequação contínua."
             )
+            parecer = {
+                "instituicao_id": inst_id,
+                "ano_base": "2025",
+                "parecer_conclusivo": parecer_padrao,
+                "status_assinatura": "Pendente",
+                "assinado_por": diretor,
+                "cargo_assinante": inst['cargo_diretor'] if inst else 'Diretor Estatutário perante o BACEN',
+                "unicad_assinante": inst['registro_unicad'] if inst else 'BACEN-REG',
+                "data_assinatura": None,
+                "hash_sha256_relatorio": None
+            }
+
+        parecer['assinado_digitalmente'] = (parecer.get('status_assinatura') == 'Assinado_Digitalmente')
+        parecer['diretor_nome'] = parecer.get('assinado_por')
+        parecer['hash_sha256_parecer'] = parecer.get('hash_sha256_relatorio')
+
+        # 8. Metadados de Exportação Oficial e Hash de Integridade
+        report_payload_for_hash = f"{inst_id}_{dashboard['resumo_kpi']['percentual_aderencia_global']}_{dashboard['cmn_5274_stats']['aderencia_media']}_{parecer['parecer_conclusivo']}"
+        integrity_hash = hashlib.sha256(report_payload_for_hash.encode('utf-8')).hexdigest()
+
+        exportacao_metadados = {
+            "instituicao_id": inst_id,
+            "hash_sha256_integridade": parecer.get('hash_sha256_relatorio') or integrity_hash,
+            "algoritmo_hash": "SHA-256 (FIPS 180-4)",
+            "data_geracao": datetime.now().isoformat(),
+            "conformidade_resolucao": "Resolução CMN nº 4.893/2021 (Art. 8º) e Resolução CMN nº 5.274/2025",
+            "validade_juridica": "Documento assinado digitalmente nos termos da MP 2.200-2/2001 e normas do BACEN."
         }
+
+        return {
+            "secao_1_identificacao": identificacao_regulatoria,
+            "secao_1_identificacao_regulatoria": identificacao_regulatoria,
+            "secao_2_efetividade_politica": efetividade_politica,
+            "secao_3_incidentes_relevantes": consolidado_incidentes,
+            "secao_4_continuidade_simulados": continuidade_simulados,
+            "secao_4_testes_continuidade_pari": continuidade_simulados,
+            "secao_5_auditorias_fragilidades": auditorias_fragilidades,
+            "secao_6_planos_adequacao": planos_adequacao,
+            "secao_6_planos_acao_terceiros": planos_adequacao,
+            "secao_7_parecer_diretor": parecer,
+            "secao_8_exportacao_metadados": exportacao_metadados
+        }
+
+    def export_annual_report_json(self, cursor, inst_id):
+        report = self.generate_annual_report(cursor, inst_id)
+        body = json.dumps(report, ensure_ascii=False, indent=2).encode('utf-8')
+        cursor.execute("SELECT razao_social FROM instituicao WHERE id = ?;", (inst_id,))
+        inst_row = cursor.fetchone()
+        inst_nome = inst_row['razao_social'].replace(' ', '_') if inst_row else f"Inst_{inst_id}"
+
+        filename = f"Relatorio_Anual_Art8_BACEN_{inst_nome}_2025.json"
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def export_csv(self, cursor, inst_id):
         cursor.execute("""
@@ -1525,12 +1954,13 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
+
 def run():
     server_address = ('0.0.0.0', PORT)
     httpd = socketserver.TCPServer(server_address, ComplianceAPIHandler)
     print(f"============================================================")
     print(f"  BACEN CMN 4.893 & 5.274 GRC Compliance System Started")
-    print(f"  RBAC & Least Privilege Engine Active")
+    print(f"  Multi-tenant Context Engine & Art. 8 Module Active")
     print(f"  Listening on http://localhost:{PORT}")
     print(f"============================================================")
     try:

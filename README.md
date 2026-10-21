@@ -170,45 +170,69 @@ http://localhost:8080
 | `POST` | `/api/instituicoes` | Cadastra nova instituição financeira |
 | `PUT` | `/api/instituicao` | Atualiza os dados cadastrais da instituição ativa |
 | `POST` | `/api/instituicao/{id}/ativar` | Alterna a instituição ativa para avaliação |
-| `GET` | `/api/requisitos` | Lista requisitos regulatórios com filtros |
+| `GET` | `/api/requisitos` / `/api/avaliacoes` | Lista requisitos regulatórios com filtros e avaliações por tenant |
 | `PUT` | `/api/avaliacoes/{req_id}` | Atualiza o status e justificativa de conformidade |
-| `GET` | `/api/evidencias` | Lista evidências regulatórias cadastradas |
-| `POST` | `/api/evidencias` | Registra evidência com geração de hash SHA-256 |
+| `GET` | `/api/evidencias` | Lista evidências regulatórias vinculadas à empresa ativa |
+| `POST` | `/api/evidencias` | Registra evidência com amarração de requisito e geração de hash SHA-256 |
 | `DELETE` | `/api/evidencias/{id}` | Exclui evidência do cofre |
-| `GET` | `/api/pari` | Retorna o dossiê completo do PARI (CSIRT, Playbooks, Simulados) |
+| `GET` | `/api/pari` | Retorna o dossiê completo do PARI da instituição (CSIRT, Playbooks, Simulados) |
 | `PUT` | `/api/pari/governanca` | Atualiza governança do CSIRT e critérios SISBACEN |
 | `POST` | `/api/pari/playbooks` | Cadastra novo playbook operacional de resposta |
 | `POST` | `/api/pari/simulados` | Registra simulação de crise / tabletop drill |
-| `GET` | `/api/relatorio_anual` | Dossiê formal do Art. 8º para auditoria |
+| `GET` | `/api/auditorias_fragilidades` | Lista apontamentos de Pentests e vulnerabilidades do tenant |
+| `POST` | `/api/auditorias_fragilidades` | Registra vulnerabilidade e plano de remediação |
+| `GET` | `/api/relatorio_anual` | Dossiê consolidado com as 8 seções mandatórias do Art. 8º da Res. CMN 4.893 |
+| `POST` | `/api/relatorio_anual/parecer` | Assinatura eletrônica e parecer conclusivo do Diretor Estatutário |
+| `GET` | `/api/relatorio_anual/export/json` | Exportação oficial em JSON com hash SHA-256 de integridade |
 | `GET` | `/api/export/csv` | Exporta a matriz de compliance para CSV (Excel) |
 | `GET` | `/api/export/json` | Exporta a base completa em JSON |
 
 ---
 
-## 📂 6. Estrutura do Repositório
+## 🧪 6. Testes Automatizados de Isolamento Multi-tenant e Art. 8º
+
+A suíte de testes de integração valida de ponta a ponta:
+- Autenticação com PBKDF2-SHA256 e MFA TOTP (RFC 6238) para todos os perfis RBAC.
+- Segregação estrita de dados e consultas via cabeçalho `X-Company-ID`.
+- Princípio do Menor Privilégio (usuários sem autorização explícita para o tenant recebem `403 Forbidden`).
+- Vinculação íntegra de evidências à empresa e ao requisito regulatório (ex: Controle 11/14 da Res. 5.274).
+- Métrica de incidentes (MTTD e MTTR) e trilha de auditoria isolada.
+- Emissão oficial do Relatório Anual (Art. 8º) com todas as 8 seções e assinatura eletrônica com hash SHA-256.
+
+Para rodar os testes:
+```bash
+python3 -m unittest tests/test_multitenancy_and_art8.py -v
+```
+
+---
+
+## 📂 7. Estrutura do Repositório
 
 ```
 bacen-grc-compliance/
+├── auth.py                  # Motor de Autenticação PBKDF2, RBAC e MFA TOTP (RFC 6238)
 ├── data/
-│   └── compliance.db        # Banco de dados relacional SQLite
+│   └── compliance.db        # Banco de dados relacional SQLite multi-tenant
 ├── docs/
 │   ├── ARQUITETURA_E_CONFORMIDADE.md   # Arquitetura técnica e DER
 │   └── MATRIZ_REQUISITOS_BACEN_4893_5274.md # Mapeamento legal exaustivo
 ├── static/
-│   └── index.html           # Interface Single Page Application (SPA)
+│   └── index.html           # Interface SPA com CompanyContextSelector e Relatório Art. 8º
+├── tests/
+│   └── test_multitenancy_and_art8.py   # Suíte de integração (Multi-tenancy e Art. 8º)
 ├── uploads/
 │   └── .gitkeep             # Diretório para armazenamento de evidências
 ├── .gitignore               # Configurações de exclusão do git
 ├── db_init.py               # DDL e criação do esquema de banco de dados
 ├── LICENSE                  # Licença MIT
 ├── README.md                # Documentação técnica e regulatória principal
-├── seed_data.py             # Carga inicial dos 32 requisitos e playbooks
+├── seed_data.py             # Carga inicial multi-tenant (Alpha Bank S3 e Torra SCD S4)
 └── server.py                # Servidor HTTP e REST API em Python nativo
 ```
 
 ---
 
-## 📜 7. Licença
+## 📜 8. Licença
 
 Este projeto é distribuído sob a licença **MIT**. Consulte o arquivo [LICENSE](LICENSE) para mais informações.
 

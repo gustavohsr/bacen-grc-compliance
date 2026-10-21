@@ -276,6 +276,9 @@ def init_db():
         titulo TEXT NOT NULL,
         data_ocorrencia TIMESTAMP NOT NULL,
         data_deteccao TIMESTAMP NOT NULL,
+        data_resolucao TIMESTAMP,
+        tempo_deteccao_minutos INTEGER DEFAULT 0,
+        tempo_resolucao_minutos INTEGER DEFAULT 0,
         categoria TEXT NOT NULL,
         criticidade TEXT NOT NULL,
         sistemas_afetados TEXT NOT NULL,
@@ -289,22 +292,76 @@ def init_db():
     );
     """)
 
-    # 15. Trilha de Auditoria (Audit Log)
+    # 15. Trilha de Auditoria (Audit Log) Segregada por Tenant
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS auditoria_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        instituicao_id INTEGER DEFAULT 1,
         data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         usuario TEXT NOT NULL,
         acao TEXT NOT NULL,
         entidade TEXT NOT NULL,
         entidade_id INTEGER,
-        detalhes TEXT
+        detalhes TEXT,
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE
     );
     """)
 
+    # 16. Fragilidades Identificadas e Testes de Intrusão (Art. 8º da Res. 4.893)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS auditorias_fragilidades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        instituicao_id INTEGER NOT NULL DEFAULT 1,
+        titulo TEXT NOT NULL,
+        tipo TEXT NOT NULL, -- 'Pentest Externo', 'Auditoria Interna', 'Varredura de Vulnerabilidades', 'Auditoria Externa BACEN'
+        severidade TEXT NOT NULL, -- 'Critica', 'Alta', 'Media', 'Baixa'
+        descricao TEXT NOT NULL,
+        requisito_id INTEGER,
+        status_remediacao TEXT NOT NULL DEFAULT 'Em_Tratamento', -- 'Em_Tratamento', 'Remediada', 'Risco_Aceito'
+        data_identificacao DATE NOT NULL,
+        prazo_remediacao DATE,
+        responsavel TEXT,
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE,
+        FOREIGN KEY (requisito_id) REFERENCES requisitos (id)
+    );
+    """)
+
+    # 17. Parecer Formal do Diretor Estatutário e Assinatura Eletrônica (Art. 8º da Res. 4.893)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS relatorio_anual_parecer (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        instituicao_id INTEGER NOT NULL,
+        ano_base TEXT NOT NULL DEFAULT '2025',
+        parecer_conclusivo TEXT NOT NULL,
+        status_assinatura TEXT NOT NULL DEFAULT 'Pendente', -- 'Pendente', 'Assinado_Digitalmente'
+        assinado_por TEXT,
+        cargo_assinante TEXT,
+        unicad_assinante TEXT,
+        data_assinatura TIMESTAMP,
+        hash_sha256_relatorio TEXT,
+        FOREIGN KEY (instituicao_id) REFERENCES instituicao (id) ON DELETE CASCADE,
+        UNIQUE(instituicao_id, ano_base)
+    );
+    """)
+
+    # Migrações automáticas para esquemas existentes
+    cursor.execute("PRAGMA table_info(auditoria_log);")
+    audit_cols = [r[1] for r in cursor.fetchall()]
+    if 'instituicao_id' not in audit_cols:
+        cursor.execute("ALTER TABLE auditoria_log ADD COLUMN instituicao_id INTEGER DEFAULT 1;")
+
+    cursor.execute("PRAGMA table_info(incidentes);")
+    inc_cols = [r[1] for r in cursor.fetchall()]
+    if 'tempo_deteccao_minutos' not in inc_cols:
+        cursor.execute("ALTER TABLE incidentes ADD COLUMN tempo_deteccao_minutos INTEGER DEFAULT 0;")
+    if 'tempo_resolucao_minutos' not in inc_cols:
+        cursor.execute("ALTER TABLE incidentes ADD COLUMN tempo_resolucao_minutos INTEGER DEFAULT 0;")
+    if 'data_resolucao' not in inc_cols:
+        cursor.execute("ALTER TABLE incidentes ADD COLUMN data_resolucao TIMESTAMP;")
+
     conn.commit()
     conn.close()
-    print("Database tables with RBAC, MFA and users initialized successfully.")
+    print("Database tables with RBAC, MFA, Multi-tenancy and Art. 8 initialized successfully.")
 
 if __name__ == "__main__":
     init_db()
