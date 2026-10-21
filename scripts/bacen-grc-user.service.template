@@ -1,0 +1,20 @@
+[Unit]
+Description=BACEN CMN 4.893 & 5.274 GRC Compliance Platform (User Service)
+Documentation=https://github.com/gustavohsr/bacen-grc-compliance
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{PROJECT_ROOT}}
+ExecStart={{PYTHON_BIN}} {{PROJECT_ROOT}}/server.py
+KillSignal=SIGTERM
+Restart=always
+RestartSec=5s
+TimeoutStopSec=10s
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bacen-grc
+
+[Install]
+WantedBy=default.target

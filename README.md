@@ -135,7 +135,8 @@ Estruturado com base nos **Arts. 6º e 8º da Resolução CMN 4.893/2021**:
 * **Python 3.10 ou superior** (Testado e validado em Linux, Windows e macOS).
 * **Nenhum pacote pip externo necessário** (utiliza 100% biblioteca padrão: `http.server`, `sqlite3`, `json`, `hashlib`, `urllib`).
 
-### Passos para Execução
+### Passos para Execução Rápida
+
 1. Clone o repositório:
 ```bash
 git clone https://github.com/gustavohsr/bacen-grc-compliance.git
@@ -148,15 +149,39 @@ python3 db_init.py
 python3 seed_data.py
 ```
 
-3. Inicie o servidor web da aplicação:
+3. Inicie a aplicação via CLI unificada:
 ```bash
-python3 server.py
+# Execução direta no terminal:
+./grc.sh run
+
+# Ou execução em segundo plano (daemon):
+./grc.sh start
 ```
 
 4. Abra seu navegador web e acesse:
 ```
 http://localhost:8080
 ```
+
+### ⚡ Inicialização Automática com o Sistema Operacional Hospedeiro (Linux / Ubuntu)
+
+Para que a aplicação inicialize automaticamente junto com o sistema operacional (systemd / desktop autostart), utilize o instalador integrado:
+
+```bash
+# Opção 1: Serviço Systemd de Usuário (Recomendado - não requer sudo):
+./grc.sh install --user --start
+
+# Para habilitar o boot da máquina antes mesmo do login do usuário:
+sudo loginctl enable-linger $USER
+
+# Opção 2: Serviço Systemd de Sistema (Para servidores dedicados):
+sudo ./grc.sh install --system --start
+
+# Opção 3: Inicialização no Login da Interface Gráfica (LXQt / GNOME):
+./grc.sh install --desktop
+```
+
+Consulte a documentação completa de inicialização em [`docs/autostart.md`](docs/autostart.md).
 
 ---
 
@@ -210,24 +235,38 @@ python3 -m unittest tests/test_multitenancy_and_art8.py -v
 
 ```
 bacen-grc-compliance/
-├── auth.py                  # Motor de Autenticação PBKDF2, RBAC e MFA TOTP (RFC 6238)
+├── grc.sh                              # Utilitário CLI de ciclo de vida (start, stop, status, test, install)
+├── auth.py                             # Motor de Autenticação PBKDF2, RBAC e MFA TOTP (RFC 6238)
 ├── data/
-│   └── compliance.db        # Banco de dados relacional SQLite multi-tenant
+│   └── compliance.db                   # Banco de dados relacional SQLite multi-tenant
 ├── docs/
 │   ├── ARQUITETURA_E_CONFORMIDADE.md   # Arquitetura técnica e DER
-│   └── MATRIZ_REQUISITOS_BACEN_4893_5274.md # Mapeamento legal exaustivo
+│   ├── MATRIZ_REQUISITOS_BACEN_4893_5274.md # Mapeamento legal exaustivo
+│   └── autostart.md                    # Guia de inicialização automática no host (systemd/desktop)
+├── logs/
+│   ├── server.log                      # Registro de logs operacionais
+│   └── server.pid                      # PID do processo em background
+├── scripts/
+│   ├── start.sh                        # Inicialização resiliente (verificação de porta e DB)
+│   ├── stop.sh                         # Encerramento seguro com SIGTERM/SIGKILL
+│   ├── status.sh                       # Diagnóstico instantâneo de saúde e integridade
+│   ├── install_service.sh              # Instalador multi-modal (systemd user/system, desktop, cron)
+│   ├── uninstall_service.sh            # Desinstalador limpo de autostart
+│   ├── bacen-grc.service.template      # Template systemd de sistema
+│   ├── bacen-grc-user.service.template # Template systemd de usuário
+│   └── bacen-grc.desktop.template      # Template XDG autostart de desktop
 ├── static/
-│   └── index.html           # Interface SPA com CompanyContextSelector e Relatório Art. 8º
+│   └── index.html                      # Interface SPA com CompanyContextSelector e Relatório Art. 8º
 ├── tests/
 │   └── test_multitenancy_and_art8.py   # Suíte de integração (Multi-tenancy e Art. 8º)
 ├── uploads/
-│   └── .gitkeep             # Diretório para armazenamento de evidências
-├── .gitignore               # Configurações de exclusão do git
-├── db_init.py               # DDL e criação do esquema de banco de dados
-├── LICENSE                  # Licença MIT
-├── README.md                # Documentação técnica e regulatória principal
-├── seed_data.py             # Carga inicial multi-tenant (Alpha Bank S3 e Torra SCD S4)
-└── server.py                # Servidor HTTP e REST API em Python nativo
+│   └── .gitkeep                        # Diretório para armazenamento de evidências
+├── .gitignore                          # Configurações de exclusão do git
+├── db_init.py                          # DDL e criação do esquema de banco de dados
+├── LICENSE                             # Licença MIT
+├── README.md                           # Documentação técnica e regulatória principal
+├── seed_data.py                        # Carga inicial multi-tenant (Alpha Bank S3 e Torra SCD S4)
+└── server.py                           # Servidor HTTP e REST API em Python nativo
 ```
 
 ---

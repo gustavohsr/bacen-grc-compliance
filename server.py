@@ -20,6 +20,8 @@ import socketserver
 import json
 import sqlite3
 import os
+import sys
+import signal
 import urllib.parse
 import mimetypes
 import hashlib
@@ -2141,8 +2143,25 @@ class ComplianceAPIHandler(http.server.BaseHTTPRequestHandler):
 
 
 def run():
+    socketserver.TCPServer.allow_reuse_address = True
     server_address = ('0.0.0.0', PORT)
     httpd = socketserver.TCPServer(server_address, ComplianceAPIHandler)
+
+    def handle_shutdown(signum, frame):
+        sig_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
+        print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Recebido sinal {sig_name} ({signum}). Encerrando servidor de compliance...")
+        try:
+            httpd.server_close()
+        except Exception:
+            pass
+        sys.exit(0)
+
+    try:
+        signal.signal(signal.SIGINT, handle_shutdown)
+        signal.signal(signal.SIGTERM, handle_shutdown)
+    except (ValueError, AttributeError):
+        pass
+
     print(f"============================================================")
     print(f"  BACEN CMN 4.893 & 5.274 GRC Compliance System Started")
     print(f"  Multi-tenant Context Engine & Art. 8 Module Active")
@@ -2150,10 +2169,13 @@ def run():
     print(f"============================================================")
     try:
         httpd.serve_forever()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         pass
     finally:
-        httpd.server_close()
+        try:
+            httpd.server_close()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     run()

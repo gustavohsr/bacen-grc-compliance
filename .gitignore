@@ -12,6 +12,10 @@ data/*.db-journal
 uploads/*
 !uploads/.gitkeep
 
+# Runtime logs and PIDs
+logs/*
+!logs/.gitkeep
+
 # Environments & IDEs
 .env
 .venv

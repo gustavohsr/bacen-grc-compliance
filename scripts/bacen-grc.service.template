@@ -1,0 +1,29 @@
+[Unit]
+Description=BACEN CMN 4.893 & 5.274 GRC Compliance Platform
+Documentation=https://github.com/gustavohsr/bacen-grc-compliance
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+Group={{GROUP}}
+WorkingDirectory={{PROJECT_ROOT}}
+ExecStart={{PYTHON_BIN}} {{PROJECT_ROOT}}/server.py
+KillSignal=SIGTERM
+Restart=always
+RestartSec=5s
+TimeoutStopSec=10s
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bacen-grc
+
+# Hardening e isolamento de processo
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-write
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

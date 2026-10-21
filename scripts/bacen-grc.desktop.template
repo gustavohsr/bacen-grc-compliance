@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=BACEN GRC Compliance Platform
+Comment=Plataforma de Gestão de Compliance BACEN 4.893 e 5.274
+Exec={{PROJECT_ROOT}}/scripts/start.sh --daemon
+Icon=security-high
+Terminal=false
+StartupNotify=false
+Categories=Office;Development;Finance;
+X-GNOME-Autostart-enabled=true
